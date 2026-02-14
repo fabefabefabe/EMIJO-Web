@@ -7,15 +7,10 @@ export class Parents {
         this.x = x;
         this.groundSurface = groundSurface;
         this.isHugging = false;
-        this.isFamilyHug = false;
     }
 
     startHug() {
         this.isHugging = true;
-    }
-
-    startFamilyHug() {
-        this.isFamilyHug = true;
     }
 
     draw(ctx, cameraX) {
@@ -23,14 +18,7 @@ export class Parents {
         if (screenX < -100 || screenX > Config.sceneWidth + 100) return;
 
         const scale = Config.pixelScale;
-        let tex;
-        if (this.isFamilyHug) {
-            tex = TC.parentsHuggingChildTex || TC.parentsHuggingTex;
-        } else if (this.isHugging) {
-            tex = TC.parentsHuggingTex;
-        } else {
-            tex = TC.parentsWaitingTex;
-        }
+        const tex = this.isHugging ? TC.parentsHuggingTex : TC.parentsWaitingTex;
         const w = tex.width * scale;
         const h = tex.height * scale;
 

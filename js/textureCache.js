@@ -42,7 +42,7 @@ import { soccerBall1, soccerBall2, soccerBall3, soccerPalette, hockeyStick1, hoc
 import { welcomeSignBoard, welcomeSignPalette } from './sprites/welcomeSignPixels.js';
 
 // Parents sprites
-import { parentsWaiting, parentsHugging, parentsHuggingChild, parentsPalette } from './sprites/parentsPixels.js';
+import { parentsWaiting, parentsHugging, parentsPalette } from './sprites/parentsPixels.js';
 
 // Light pole sprites
 import { lightPole as lightPoleData, lightPolePalette } from './sprites/lightPolePixels.js';
@@ -211,7 +211,6 @@ export const lightPoleNightTex = renderSprite(lightPoleData, Palettes.lightPoleN
 // --- Parents Textures ---
 export const parentsWaitingTex = renderSprite(parentsWaiting, parentsPalette);
 export const parentsHuggingTex = renderSprite(parentsHugging, parentsPalette);
-export const parentsHuggingChildTex = renderSprite(parentsHuggingChild, parentsPalette);
 
 // --- Projectile Textures ---
 export const soccerBallFrames = [

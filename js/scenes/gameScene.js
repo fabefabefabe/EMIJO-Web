@@ -247,16 +247,48 @@ export class GameScene {
                         this.player.walkFrame = ((this.player.walkFrame || 0) + 1) % 6;
                     }
                 } else {
-                    // Phase 2: Arrived — family hug, player disappears into group sprite
+                    // Phase 2: Arrived — player stands between parents, hearts float
                     this._familyHugStarted = true;
                     this._hugTimer = 0;
-                    this.player.visible = false;
+                    this._hugHearts = [];
+                    this._heartSpawnTimer = 0;
                     this.player.vx = 0;
-                    this.parents.startFamilyHug();
+                    this.player.walkFrame = 0;
+                    this.player.facingRight = true;
+                    this.parents.startHug();
                 }
             } else {
-                // Phase 3: Hold family hug for 2.5 seconds then transition
+                // Phase 3: Hold hug with floating hearts for 2.5 seconds then transition
                 this._hugTimer += dt;
+
+                // Spawn floating hearts periodically
+                this._heartSpawnTimer += dt;
+                if (this._heartSpawnTimer >= 0.3) {
+                    this._heartSpawnTimer -= 0.3;
+                    // Spawn a heart at a random position around the family group
+                    const px = this.parents.x + (Math.random() - 0.5) * 80;
+                    const baseY = Config.sceneHeight - 16 * Config.pixelScale - 32 * Config.pixelScale;
+                    this._hugHearts.push({
+                        x: px,
+                        y: baseY + Math.random() * 20 - 10,
+                        vy: -40 - Math.random() * 30,  // float upward
+                        vx: (Math.random() - 0.5) * 20, // slight horizontal drift
+                        alpha: 1.0,
+                        scale: 0.6 + Math.random() * 0.5,
+                    });
+                }
+
+                // Update existing hearts
+                for (let i = this._hugHearts.length - 1; i >= 0; i--) {
+                    const h = this._hugHearts[i];
+                    h.y += h.vy * dt;
+                    h.x += h.vx * dt;
+                    h.alpha -= dt * 0.5; // fade out over 2 seconds
+                    if (h.alpha <= 0) {
+                        this._hugHearts.splice(i, 1);
+                    }
+                }
+
                 if (this._hugTimer >= 2.5) {
                     this.game.setScene('levelComplete');
                 }
@@ -505,6 +537,11 @@ export class GameScene {
         // Draw player
         this.player.draw(ctx, camX);
 
+        // Draw floating hearts during family hug
+        if (this._familyHugStarted && this._hugHearts && this._hugHearts.length > 0) {
+            this._drawHugHearts(ctx, camX);
+        }
+
         // Draw birds
         for (const bird of this.birds) {
             bird.draw(ctx, camX);
@@ -658,6 +695,27 @@ export class GameScene {
         ctx.globalCompositeOperation = 'source-over';
 
         ctx.restore();
+    }
+
+    _drawHugHearts(ctx, cameraX) {
+        const scale = Config.pixelScale;
+        const tex = TC.heartFullTex;
+        const baseW = tex.width;
+        const baseH = tex.height;
+
+        ctx.imageSmoothingEnabled = false;
+        for (const h of this._hugHearts) {
+            const screenX = h.x - cameraX;
+            if (screenX < -50 || screenX > Config.sceneWidth + 50) continue;
+
+            const w = baseW * scale * h.scale;
+            const hh = baseH * scale * h.scale;
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, h.alpha);
+            ctx.drawImage(tex, screenX - w / 2, h.y - hh / 2, w, hh);
+            ctx.restore();
+        }
     }
 
     _drawPause(ctx) {
