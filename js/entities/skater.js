@@ -1,4 +1,4 @@
-// Skater Entity - anti-idle punishment that appears when player doesn't move
+// Skater Entity - alternates with jogger from level 3+, moves left
 import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 
@@ -12,15 +12,43 @@ export class Skater {
         this.x = startX;
         this.direction = direction;
         this.y = Config.groundSurface;
-        this.speed = 500; // Slower than before (was 800)
+        this.speed = Config.joggerSpeed; // Same speed as jogger
         this.scaleFactor = 1.5; // Make skater bigger
 
         this.alive = true;
+        this.knocked = false;
+        this.knockTimer = 0;
         this.frame = 0;
         this.animTimer = 0;
     }
 
+    /**
+     * Spawn a skater from the right edge of the screen, moving left.
+     */
+    static spawnRandom(cameraX, groundSurface) {
+        const startX = cameraX + Config.sceneWidth + 60;
+        return new Skater(startX, -1);
+    }
+
+    /**
+     * Knock down the skater (called on player collision).
+     */
+    knockDown() {
+        if (this.knocked) return;
+        this.knocked = true;
+        this.knockTimer = 0;
+    }
+
     update(dt) {
+        // Knocked down: wait 3 seconds then disappear
+        if (this.knocked) {
+            this.knockTimer += dt;
+            if (this.knockTimer >= 3.0) {
+                this.alive = false;
+            }
+            return;
+        }
+
         // Move
         this.x += this.direction * this.speed * dt;
 
@@ -31,13 +59,16 @@ export class Skater {
             this.frame = (this.frame + 1) % 2;
         }
 
-        // Remove if traveled too far from start (3 screen widths)
-        if (Math.abs(this.x - this.startX) > Config.sceneWidth * 3) {
+        // Remove if gone off screen left
+        if (this.x < -200) {
             this.alive = false;
         }
     }
 
     getAABB() {
+        if (this.knocked) {
+            return { x: this.x, y: this.y, hw: 0, hh: 0 };
+        }
         const scale = Config.pixelScale * this.scaleFactor;
         return {
             x: this.x,
@@ -49,12 +80,11 @@ export class Skater {
 
     draw(ctx, cameraX) {
         const texture = TC.skaterFrames[this.frame];
-        const scale = Config.pixelScale * this.scaleFactor; // Apply scale factor
+        const scale = Config.pixelScale * this.scaleFactor;
         const w = texture.width * scale;
         const h = texture.height * scale;
         const screenX = this.x - cameraX - w / 2;
 
-        // Misma fórmula que el Player para altura correcta
         const sidewalkH = 16 * Config.pixelScale;
         const screenY = Config.sceneHeight - sidewalkH - h - (this.y - Config.groundSurface);
 

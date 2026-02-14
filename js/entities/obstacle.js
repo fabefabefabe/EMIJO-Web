@@ -12,7 +12,7 @@ const BODY_SIZES = {
     trashCan:  { w: 10, h: 18 },
     pothole:   { w: 18, h: 8 },
     cooler:    { w: 16, h: 12 },
-    tree:      { w: 18, h: 20 },  // canopy AABB (wide and tall)
+    tree:      { w: 36, h: 40 },  // canopy AABB (doubled)
 };
 
 // Texture lookup (default textures)
@@ -30,11 +30,13 @@ export class Obstacle {
      * @param {string} type - 'rock', 'bench', 'trashCan', 'pothole', 'cooler', or 'tree'
      * @param {number} x - X position in world coordinates
      * @param {number} groundSurface - Y position of ground surface
+     * @param {string} characterType - 'emi' or 'jo' (for pothole coloring)
      */
-    constructor(type, x, groundSurface) {
+    constructor(type, x, groundSurface, characterType = 'emi') {
         this.type = type;
         this.x = x;
         this.groundSurface = groundSurface;
+        this.characterType = characterType;
         this.destroyed = false; // For projectile collision
 
         const scale = Config.pixelScale;
@@ -89,13 +91,13 @@ export class Obstacle {
 
         if (type === 'pothole') {
             // Pothole is embedded deeper in ground
-            this.y = groundSurface + 12;
+            this.y = groundSurface + 18;
         } else if (type === 'tree') {
             // Tree sprite bottom on ground, AABB at canopy
             this.y = groundSurface + spriteH / 2;
-            // Tree is 50px * 3 = 150px. Canopy = rows 0-20 = 21*3 = 63px
-            // Canopy center Y (game coords) = groundSurface + 150 - 31.5 = groundSurface + 118.5
-            this.canopyY = groundSurface + spriteH - (21 * scale) / 2;
+            // Tree is 100px * 3 = 300px. Canopy = rows 0-41 = 42*3 = 126px
+            // Canopy center Y (game coords) = groundSurface + 300 - 63 = groundSurface + 237
+            this.canopyY = groundSurface + spriteH - (42 * scale) / 2;
         } else {
             // Ground obstacles: center based on sprite height
             this.y = groundSurface + spriteH / 2;
@@ -172,12 +174,12 @@ export class Obstacle {
         if (this.shaking) return;
         this.shaking = true;
         this.shakeTimer = 0;
-        // Spawn 5-8 leaves from canopy area
+        // Spawn 8-14 leaves from canopy area (wider for bigger tree)
         const scale = Config.pixelScale;
-        const numLeaves = 5 + Math.floor(Math.random() * 4);
+        const numLeaves = 8 + Math.floor(Math.random() * 7);
         for (let i = 0; i < numLeaves; i++) {
             this.leaves.push({
-                x: this.x + (Math.random() - 0.5) * 50,
+                x: this.x + (Math.random() - 0.5) * 100,
                 screenY: 0, // will be set relative to canopy top
                 vy: 20 + Math.random() * 40,     // fall speed (screen pixels/s)
                 vx: (Math.random() - 0.5) * 30,  // horizontal drift
@@ -333,7 +335,9 @@ export class Obstacle {
             texture = TC.benchWithPersonFrames[this.benchVariant];
         } else if (this.type === 'pothole' && this.activeFallAnim) {
             if (this.fallAnimPhase === 'fallIn') {
-                texture = TC.potholeFallIn;
+                // Composite draw: hole + character body
+                this._drawPotholeFallIn(ctx, cameraX);
+                return;
             } else if (this.fallAnimPhase === 'eyes') {
                 texture = this.eyesOpen ? TC.potholeEyes : TC.potholeEyesClosed;
             }
@@ -349,7 +353,7 @@ export class Obstacle {
 
         // Pothole: sink deeper into ground
         if (this.type === 'pothole') {
-            screenY = Config.sceneHeight - sidewalkH - h + 12;
+            screenY = Config.sceneHeight - sidewalkH - h + 18;
         }
 
         ctx.imageSmoothingEnabled = false;
@@ -385,5 +389,35 @@ export class Obstacle {
                 }
             }
         }
+    }
+
+    /**
+     * Draw composite pothole fall-in: hole sprite + character body sprite
+     */
+    _drawPotholeFallIn(ctx, cameraX) {
+        const scale = Config.pixelScale;
+        const sidewalkH = 16 * scale;
+
+        // Draw hole first (behind body)
+        const holeTex = TC.potholeFallInHoleTex;
+        const holeW = holeTex.width * scale;
+        const holeH = holeTex.height * scale;
+        const holeScreenX = this.x - cameraX - holeW / 2;
+        const holeScreenY = Config.sceneHeight - sidewalkH - holeH + 18;
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(holeTex, holeScreenX, holeScreenY, holeW, holeH);
+
+        // Draw body on top (character-colored)
+        const bodyTex = this.characterType === 'jo'
+            ? TC.potholeFallInBodyJo
+            : TC.potholeFallInBodyEmi;
+        const bodyW = bodyTex.width * scale;
+        const bodyH = bodyTex.height * scale;
+        const bodyScreenX = this.x - cameraX - bodyW / 2;
+        // Body emerges from hole: bottom of body aligns with top of hole
+        const bodyScreenY = holeScreenY - bodyH + 6;
+
+        ctx.drawImage(bodyTex, bodyScreenX, bodyScreenY, bodyW, bodyH);
     }
 }

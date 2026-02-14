@@ -14,6 +14,7 @@ import { Projectile } from '../entities/projectile.js';
 import { AmmoPickup } from '../entities/ammoPickup.js';
 import { Parents } from '../entities/parents.js';
 import { Jogger } from '../entities/jogger.js';
+import { Skater } from '../entities/skater.js';
 import { HallOfFame } from '../systems/hallOfFame.js';
 
 export class GameScene {
@@ -68,7 +69,7 @@ export class GameScene {
         const levelSpawnWidth = flagX + 1500;
         const obstacleData = generateObstacles(levelSpawnWidth, groundSurface, exclusionZones);
         this.obstacles = obstacleData.map(o =>
-            new Obstacle(o.type, o.x, o.groundSurface)
+            new Obstacle(o.type, o.x, o.groundSurface, charType)
         );
 
         // Birds
@@ -105,15 +106,25 @@ export class GameScene {
         this.ammoPickups = [];
         this._spawnFixedAmmo();
 
-        // Joggers (level 6+)
+        // Joggers & Skaters (level 3+, alternating)
         this.joggers = [];
+        this.skaters = [];
+        this.npcSpawnToggle = false; // false=jogger, true=skater
         this.joggerSpawnTimer = 0;
         this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
 
-        // Dogs at 100m markers
+        // Dogs at 100m markers — force a tree obstacle at each marker
         this.dogMarkers = this._generateDogMarkers();
         this.dogAnimTimer = 0;
-        this.dogFrame = 0; // 0=left, 1=right
+        this.dogFrame = 0; // 0=frame1, 1=frame2
+
+        // Create a tree at each dog marker position
+        for (const marker of this.dogMarkers) {
+            const treeObs = new Obstacle('tree', marker.x, groundSurface, charType);
+            treeObs.isDogTree = true;
+            this.obstacles.push(treeObs);
+            marker.treeObstacle = treeObs;
+        }
 
         // Welcome signs at specific levels - 2 lines, near start
         this.welcomeSigns = [];
@@ -247,8 +258,50 @@ export class GameScene {
 
         // Handle end states
         if (this.isLevelComplete) {
-            if (!this._familyHugStarted) {
-                // Phase 1: Player auto-walks toward parents center
+            // Keep existing projectiles flying during level complete
+            for (const proj of this.projectiles) {
+                proj.update(dt);
+            }
+            this.projectiles = this.projectiles.filter(p => p.alive);
+
+            // Projectile vs obstacle collisions (so bullets can still destroy obstacles)
+            for (const proj of this.projectiles) {
+                for (const obstacle of this.obstacles) {
+                    if (obstacle.destroyed) continue;
+                    if (obstacle.type === 'pothole') continue;
+                    if (obstacle.type === 'trashCan' && obstacle.knocked) continue;
+                    if (aabbOverlap(proj.getAABB(), obstacle.getAABB())) {
+                        obstacle.destroyed = true;
+                        proj.destroy();
+                        this.game.music.playDestroySound();
+                        break;
+                    }
+                }
+            }
+            this.obstacles = this.obstacles.filter(o => !o.destroyed);
+
+            if (this._levelCompletePhase === 'landing') {
+                // Phase 1: If player is in the air, bring them down
+                if (!this.player.isOnGround) {
+                    // Apply gravity to bring player down
+                    this.player.vy += Config.gravity * dt;
+                    this.player.y += this.player.vy * dt;
+                    this.player.vx = 0;
+                    // Check ground
+                    if (this.player.y <= Config.groundSurface) {
+                        this.player.y = Config.groundSurface;
+                        this.player.vy = 0;
+                        this.player.isOnGround = true;
+                    }
+                }
+                if (this.player.isOnGround) {
+                    this.player.state = 'walking';
+                    this._levelCompletePhase = 'walking';
+                }
+            }
+
+            if (this._levelCompletePhase === 'walking') {
+                // Phase 2: Player auto-walks toward parents center
                 const targetX = this.parents.x;
                 if (this.player.x < targetX) {
                     this.player.vx = Config.walkSpeed * 0.5;
@@ -261,7 +314,8 @@ export class GameScene {
                         this.player.walkFrame = ((this.player.walkFrame || 0) + 1) % 6;
                     }
                 } else {
-                    // Phase 2: Arrived — player stands between parents, hearts float
+                    // Arrived — switch to hugging phase
+                    this._levelCompletePhase = 'hugging';
                     this._familyHugStarted = true;
                     this._hugTimer = 0;
                     this._hugHearts = [];
@@ -271,7 +325,9 @@ export class GameScene {
                     this.player.facingRight = true;
                     this.parents.startHug();
                 }
-            } else {
+            }
+
+            if (this._levelCompletePhase === 'hugging') {
                 // Phase 3: Hold hug with floating hearts for 2.5 seconds then transition
                 this._hugTimer += dt;
 
@@ -307,6 +363,9 @@ export class GameScene {
                     this.game.setScene('levelComplete');
                 }
             }
+
+            // Update camera to follow player during level complete
+            this.camera.update(this.player.x);
             return;
         }
 
@@ -516,14 +575,20 @@ export class GameScene {
         this.dogMarkers = this.dogMarkers.filter(d => d.x > cullX);
         this.lightPoles = this.lightPoles.filter(p => p.x > cullX);
         this.joggers = this.joggers.filter(j => j.alive && j.x > cullX);
+        this.skaters = this.skaters.filter(s => s.alive && s.x > cullX);
 
-        // Spawn joggers (level 6+)
+        // Spawn joggers/skaters (level 3+, alternating)
         if (this.currentLevel >= Config.joggerMinLevel) {
             this.joggerSpawnTimer += dt;
             if (this.joggerSpawnTimer >= this.joggerNextSpawnAt) {
                 this.joggerSpawnTimer = 0;
                 this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
-                this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                if (this.npcSpawnToggle) {
+                    this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
+                } else {
+                    this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                }
+                this.npcSpawnToggle = !this.npcSpawnToggle;
             }
         }
 
@@ -532,6 +597,12 @@ export class GameScene {
             jogger.update(dt);
         }
         this.joggers = this.joggers.filter(j => j.alive);
+
+        // Update skaters
+        for (const skater of this.skaters) {
+            skater.update(dt);
+        }
+        this.skaters = this.skaters.filter(s => s.alive);
 
         // Collision: player vs obstacles (type-specific)
         const playerAABB = this.player.getAABB();
@@ -583,6 +654,18 @@ export class GameScene {
             }
         }
 
+        // Collision: player vs skaters
+        for (const skater of this.skaters) {
+            if (skater.knocked) continue;
+            if (aabbOverlap(playerAABB, skater.getAABB())) {
+                if (this.player.tripAndFall()) {
+                    skater.knockDown();
+                    this.game.music.playHitSound();
+                }
+                break;
+            }
+        }
+
         // Los pájaros son decorativos, no quitan vidas
 
         // Level complete: player passes the flag position
@@ -626,6 +709,11 @@ export class GameScene {
         // Draw joggers
         for (const jogger of this.joggers) {
             jogger.draw(ctx, camX);
+        }
+
+        // Draw skaters
+        for (const skater of this.skaters) {
+            skater.draw(ctx, camX);
         }
 
         // Draw flag
@@ -980,50 +1068,56 @@ export class GameScene {
     }
 
     /**
-     * Draw animated sitting dogs at every 100m marker
-     * Dog sits on sidewalk next to sign post, smaller scale
+     * Draw animated dogs emerging from tree canopy at every 100m marker.
+     * Dog appears in the upper-right quadrant of the tree canopy, holding a sign.
      */
     _drawDogMarkers(ctx, cameraX) {
         const scale = Config.pixelScale;
-        const dogScaleFactor = 1.0; // Smaller dog (was 2.0)
-        const dogScale = scale * dogScaleFactor;
         const sidewalkH = 16 * scale;
         const H = Config.sceneHeight;
 
-        // Get dog texture based on animation frame
-        const dogTex = this.dogFrame === 0 ? TC.dogSitting1Tex : TC.dogSitting2Tex;
-        const signTex = TC.signPostTex;
+        // Get dog-in-canopy texture based on animation frame
+        const dogTex = this.dogFrame === 0 ? TC.dogCanopy1Tex : TC.dogCanopy2Tex;
 
         ctx.imageSmoothingEnabled = false;
 
         for (const marker of this.dogMarkers) {
             // Only draw if visible on screen
             const screenX = marker.x - cameraX;
-            if (screenX < -100 || screenX > Config.sceneWidth + 100) continue;
+            if (screenX < -200 || screenX > Config.sceneWidth + 200) continue;
 
-            // Sign on sidewalk - base touches sidewalk surface
-            const signW = signTex.width * dogScale;
-            const signH = signTex.height * dogScale;
-            const signScreenX = screenX - signW / 2;
-            const signScreenY = H - sidewalkH - signH;
+            // Tree dimensions (100 rows × 40 cols × scale 3)
+            const treeH = 100 * scale; // 300px
+            const treeW = 40 * scale;  // 120px
+            const canopyH = 42 * scale; // 126px (rows 0-41)
 
-            ctx.drawImage(signTex, signScreenX, signScreenY, signW, signH);
+            // Tree top position on screen
+            const treeScreenTop = H - sidewalkH - treeH;
+            const treeScreenLeft = screenX - treeW / 2;
 
-            // Dog sitting next to sign, on sidewalk
+            // Dog position: upper-right quadrant of canopy
+            const dogScaleFactor = 1.5;
+            const dogScale = scale * dogScaleFactor;
             const dogW = dogTex.width * dogScale;
             const dogH = dogTex.height * dogScale;
-            const dogScreenX = signScreenX - dogW - 2; // To the left of sign
-            const dogScreenY = H - sidewalkH - dogH;
+
+            // Position in upper-right quadrant: shifted right and near top
+            const dogScreenX = treeScreenLeft + treeW * 0.5 - dogW * 0.4;
+            const dogScreenY = treeScreenTop + canopyH * 0.08;
 
             ctx.drawImage(dogTex, dogScreenX, dogScreenY, dogW, dogH);
 
-            // Draw meters text on sign (black on white sign area)
+            // Draw meters text on the sign area of the dog sprite
+            // The sign is in the right portion of the sprite (columns 8-13, rows 5-8)
             const metersText = TC.renderTextBlack(marker.meters + 'M');
-            const textScale = scale * 0.4;
+            const textScale = scale * 0.35;
             const textW = metersText.width * textScale;
             const textH = metersText.height * textScale;
-            const textX = signScreenX + signW / 2 - textW / 2;
-            const textY = signScreenY + 6; // Inside the white part of sign
+            // Center text on the sign area
+            const signCenterX = dogScreenX + dogW * 0.65;
+            const signCenterY = dogScreenY + dogH * 0.42;
+            const textX = signCenterX - textW / 2;
+            const textY = signCenterY - textH / 2;
 
             ctx.drawImage(metersText, textX, textY, textW, textH);
         }
@@ -1125,8 +1219,33 @@ export class GameScene {
         if (this.isLevelComplete) return;
         this.isLevelComplete = true;
         this._familyHugStarted = false;
+        this._levelCompletePhase = 'landing'; // 'landing' → 'walking' → 'hugging'
+
         // Track total meters across levels
         this.game.state.totalMeters += this.metersWalked;
+
+        // Stop auto-shoot (no new bullets)
+        this.autoShootActive = false;
+
+        // Clear invincibility / blinking
+        this.player.isInvincible = false;
+        this.player.invTimer = 0;
+        this.player.blinkTimer = 0;
+        this.player.alpha = 1.0;
+
+        // If player is in a trip/pothole state, force back to walking
+        if (this.player.state === 'tripping' || this.player.state === 'lying' ||
+            this.player.state === 'gettingUp' || this.player.state === 'fallingInHole') {
+            this.player.state = 'walking';
+            this.player.visible = true;
+            this.player.vx = 0;
+            this.player.tripTimer = 0;
+            this.player.tripPhase = '';
+            this.player.fallMomentum = 0;
+            this.player.potholeTimer = 0;
+            this.player.potholeObstacle = null;
+        }
+
         // Parents open arms (frame 2)
         this.parents.startHug();
         // Play victory music

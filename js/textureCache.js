@@ -14,7 +14,7 @@ import { tile as bushLargeTileData } from './sprites/bushLargePixels.js';
 import { tile as sidewalkTileData } from './sprites/sidewalkPixels.js';
 
 // Object sprites
-import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, trashCanFalling as trashCanFallingData, trashCanSpilled as trashCanSpilledData, potholeFlat as potholeFlatData, potholeFallIn as potholeFallInData, potholeEyes as potholeEyesData, potholeEyesClosed as potholeEyesClosedData, cooler as coolerData, tree as treeData, leaf as leafData } from './sprites/obstaclePixels.js';
+import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, trashCanFalling as trashCanFallingData, trashCanSpilled as trashCanSpilledData, potholeFlat as potholeFlatData, potholeFallIn as potholeFallInData, potholeEyes as potholeEyesData, potholeEyesClosed as potholeEyesClosedData, potholeFallInBody as potholeFallInBodyData, potholeFallInHole as potholeFallInHoleData, cooler as coolerData, tree as treeData, leaf as leafData } from './sprites/obstaclePixels.js';
 import { joggerRun1, joggerRun2, joggerFallen } from './sprites/joggerPixels.js';
 import { flag as flagData } from './sprites/flagPixels.js';
 import { frame1 as birdFrame1, frame2 as birdFrame2, frame3 as birdFrame3 } from './sprites/birdPixels.js';
@@ -34,7 +34,7 @@ import { speakerOn, speakerOff } from './sprites/musicIconPixels.js';
 
 // Flower and dog sprites
 import { flowerShape, flowerPaletteRed, flowerPaletteYellow, flowerPalettePink, flowerPaletteWhite, flowerPalettePurple, flowerPaletteOrange } from './sprites/flowerPixels.js';
-import { dogSitting1, dogSitting2, signPost, palette as dogPalette } from './sprites/dogPixels.js';
+import { dogSitting1, dogSitting2, signPost, dogCanopy1, dogCanopy2, palette as dogPalette } from './sprites/dogPixels.js';
 
 // Projectile sprites
 import { soccerBall1, soccerBall2, soccerBall3, soccerPalette, hockeyStick1, hockeyStick2, hockeyStick3, hockeyPalette } from './sprites/projectilePixels.js';
@@ -125,6 +125,9 @@ export const potholeFlat = renderSprite(potholeFlatData, Palettes.objects);
 export const potholeFallIn = renderSprite(potholeFallInData, Palettes.objects);
 export const potholeEyes = renderSprite(potholeEyesData, Palettes.objects);
 export const potholeEyesClosed = renderSprite(potholeEyesClosedData, Palettes.objects);
+export const potholeFallInBodyEmi = renderSprite(potholeFallInBodyData, Palettes.emi);
+export const potholeFallInBodyJo = renderSprite(potholeFallInBodyData, Palettes.jo);
+export const potholeFallInHoleTex = renderSprite(potholeFallInHoleData, Palettes.objects);
 export const cooler = renderSprite(coolerData, Palettes.objects);
 export const tree = renderSprite(treeData, Palettes.objects);
 export const leafTex = renderSprite(leafData, Palettes.objects);
@@ -210,6 +213,8 @@ export const flowerTextures = {
 export const dogSitting1Tex = renderSprite(dogSitting1, dogPalette);
 export const dogSitting2Tex = renderSprite(dogSitting2, dogPalette);
 export const signPostTex = renderSprite(signPost, dogPalette);
+export const dogCanopy1Tex = renderSprite(dogCanopy1, dogPalette);
+export const dogCanopy2Tex = renderSprite(dogCanopy2, dogPalette);
 // Legacy
 export const dogLeftTex = dogSitting1Tex;
 export const dogRightTex = dogSitting2Tex;

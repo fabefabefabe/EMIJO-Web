@@ -51,12 +51,9 @@ export const Config = {
     level1DistanceMeters: 150,      // primer nivel a 150m
     levelDistanceIncrement: 100,    // cada nivel +100m
 
-    // Anti-idle skater
-    idleTimeForSkater: 15,
-
-    // Jogger NPC (from level 6+)
-    joggerBaseSpawnInterval: 8.0,   // average seconds between jogger spawns
-    joggerSpeed: 200,               // px/s (moves toward left)
+    // Jogger / Skater NPC (from level 3+, alternating)
+    joggerBaseSpawnInterval: 12.0,  // average seconds between NPC spawns (less frequent)
+    joggerSpeed: 150,               // px/s (jogger & skater both move left, slower)
     joggerMinLevel: 3,              // first level joggers appear
 
     // Ammo (auto-shoot power-up)

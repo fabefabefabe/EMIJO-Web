@@ -1,5 +1,6 @@
-// Dog Sprite - animated sitting dog with sign showing distance markers
-// Palette indices: 0=transparent, 1=brown dark, 2=brown light, 3=tan, 4=white, 5=black, 6=wood, 7=wood dark
+// Dog Sprite - animated dog emerging from tree canopy with sign
+// Palette indices: 0=transparent, 1=brown dark, 2=brown light, 3=tan, 4=white, 5=black, 6=wood, 7=wood dark, 8=tree green
+// Dog emerges from tree canopy in upper-right quadrant, waving a sign with paw
 
 export const palette = [
     [0, 0, 0, 0],       // 0: transparent
@@ -10,9 +11,10 @@ export const palette = [
     [30, 30, 30, 255],  // 5: black (nose, eyes)
     [160, 120, 80, 255], // 6: wood (sign post)
     [120, 80, 50, 255], // 7: wood dark
+    [80, 140, 50, 255], // 8: tree green (canopy blending)
 ];
 
-// Dog sitting frame 1 (tail up, head straight) - 12x12
+// Dog sitting frame 1 (legacy, tail up, head straight) - 12x12
 export const dogSitting1 = [
     [0,0,0,0,1,1,0,0,0,0,0,2],
     [0,0,0,1,2,2,1,0,0,0,2,1],
@@ -28,7 +30,7 @@ export const dogSitting1 = [
     [0,0,0,0,0,0,0,0,0,0,0,0],
 ];
 
-// Dog sitting frame 2 (tail down, head tilted) - 12x12
+// Dog sitting frame 2 (legacy, tail down, head tilted) - 12x12
 export const dogSitting2 = [
     [0,0,0,0,1,1,0,0,0,0,0,0],
     [0,0,0,1,2,2,1,0,0,0,0,0],
@@ -66,6 +68,50 @@ export const signPost = [
     [0,0,0,0,0,6,6,0,0,0,0,0],
     [0,0,0,0,0,7,7,0,0,0,0,0],
     [0,0,0,0,0,7,7,0,0,0,0,0],
+];
+
+// Dog emerging from canopy frame 1 - 16x16
+// Dog head/ears poking out from foliage, paw extending right holding sign (tilted left)
+// Upper portion: dog head + sign held by paw
+// Lower portion: tree foliage (green index 8) covering body
+export const dogCanopy1 = [
+    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,2,2,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,5,4,2,5,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,3,5,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,3,3,0,2,0,0,0,0,0,0,0,0],
+    [0,0,0,1,2,2,1,2,4,4,4,4,4,4,0,0],
+    [0,0,0,0,2,2,0,2,4,4,4,4,4,4,0,0],
+    [0,0,0,0,2,2,0,0,4,4,4,4,4,4,0,0],
+    [0,0,0,0,2,2,0,0,4,4,4,4,4,4,0,0],
+    [0,0,8,8,1,2,8,0,0,6,6,0,0,0,8,0],
+    [0,8,8,8,8,8,8,8,0,6,6,0,8,8,8,8],
+    [8,8,8,8,8,8,8,8,8,6,6,8,8,8,8,8],
+    [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+    [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+    [0,8,8,8,8,8,8,8,8,8,8,8,8,8,8,0],
+    [0,0,8,8,8,8,8,8,8,8,8,8,8,8,0,0],
+];
+
+// Dog emerging from canopy frame 2 - 16x16
+// Same dog but sign tilted slightly right (paw waving animation)
+export const dogCanopy2 = [
+    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,2,2,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,5,4,2,5,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,3,5,0,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,3,3,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,1,2,2,1,0,2,4,4,4,4,4,0,0],
+    [0,0,0,0,2,2,0,0,2,4,4,4,4,4,0,0],
+    [0,0,0,0,2,2,0,0,0,4,4,4,4,4,0,0],
+    [0,0,0,0,2,2,0,0,0,4,4,4,4,4,0,0],
+    [0,0,8,8,1,2,8,0,0,0,6,6,0,0,8,0],
+    [0,8,8,8,8,8,8,8,0,0,6,6,8,8,8,8],
+    [8,8,8,8,8,8,8,8,8,8,6,6,8,8,8,8],
+    [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+    [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+    [0,8,8,8,8,8,8,8,8,8,8,8,8,8,8,0],
+    [0,0,8,8,8,8,8,8,8,8,8,8,8,8,0,0],
 ];
 
 // Legacy exports for compatibility
