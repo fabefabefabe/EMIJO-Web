@@ -503,6 +503,74 @@ export class MusicSystem {
         osc.stop(this.audioCtx.currentTime + 0.15);
     }
 
+    playPotholeSound() {
+        if (!this.audioCtx || this.isMuted) return;
+
+        // Falling-into-hole sound: dramatic descending tone + echo effect
+        const time = this.audioCtx.currentTime;
+
+        // Main descending oscillator (sine wave, 400Hz → 60Hz over 0.4s)
+        const osc = this.audioCtx.createOscillator();
+        const oscGain = this.audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, time);
+        osc.frequency.exponentialRampToValueAtTime(60, time + 0.4);
+
+        oscGain.gain.setValueAtTime(0.3, time);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.masterGain);
+
+        osc.start(time);
+        osc.stop(time + 0.5);
+
+        // Harmonic overtone (triangle wave, follows main but higher)
+        const osc2 = this.audioCtx.createOscillator();
+        const osc2Gain = this.audioCtx.createGain();
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(600, time);
+        osc2.frequency.exponentialRampToValueAtTime(80, time + 0.35);
+
+        osc2Gain.gain.setValueAtTime(0.12, time);
+        osc2Gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+
+        osc2.connect(osc2Gain);
+        osc2Gain.connect(this.masterGain);
+
+        osc2.start(time);
+        osc2.stop(time + 0.4);
+
+        // Short noise burst at start (impact of falling)
+        const bufferSize = this.audioCtx.sampleRate * 0.08;
+        const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.05));
+        }
+
+        const noise = this.audioCtx.createBufferSource();
+        const noiseGain = this.audioCtx.createGain();
+        const filter = this.audioCtx.createBiquadFilter();
+
+        noise.buffer = buffer;
+        filter.type = 'lowpass';
+        filter.frequency.value = 1500;
+
+        noiseGain.gain.setValueAtTime(0.2, time + 0.05);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.masterGain);
+
+        noise.start(time + 0.05);
+        noise.stop(time + 0.15);
+    }
+
     // ==========================================
     // PLAYBACK CONTROL
     // ==========================================

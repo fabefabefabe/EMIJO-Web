@@ -176,6 +176,37 @@ export const Palettes = {
         [255,200,100],      // 4: warm pale rays
     ],
 
+    moon: [
+        null,               // 0: transparent
+        [240,240,255],      // 1: bright white (lit area)
+        [200,200,220],      // 2: light gray (craters/detail)
+        [255,255,200],      // 3: pale yellow (glow)
+    ],
+
+    sand: [
+        null,               // 0: transparent
+        [230,210,170],      // 1: light sand
+        [210,190,150],      // 2: medium sand
+        [180,160,120],      // 3: dark sand grain
+        [245,230,195],      // 4: sand highlight
+    ],
+
+    sandSunset: [
+        null,               // 0: transparent
+        [200,170,120],      // 1: warm light sand
+        [180,150,105],      // 2: warm medium sand
+        [150,125,85],       // 3: warm dark grain
+        [220,190,145],      // 4: warm highlight
+    ],
+
+    sandNight: [
+        null,               // 0: transparent
+        [90,85,70],         // 1: dark sand
+        [75,70,58],         // 2: darker sand
+        [55,50,40],         // 3: very dark grain
+        [105,100,85],       // 4: dim highlight
+    ],
+
     lightPoleNight: [
         [0,0,0,0],          // 0: transparent
         [50,50,60],         // 1: dark gray (pole body, darker at night)

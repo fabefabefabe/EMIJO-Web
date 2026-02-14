@@ -12,10 +12,11 @@ export class Camera {
      * Player can walk back but only within the visible screen.
      */
     update(playerX) {
-        const halfWidth = Config.sceneWidth / 2;
+        // Player positioned at ~25% from left edge (more forward visibility)
+        const playerOffset = Config.sceneWidth * 0.25;
 
-        // Target: center camera on player, but never go below 0
-        const targetX = Math.max(0, playerX - halfWidth);
+        // Target: player at 25% from left, but never go below 0
+        const targetX = Math.max(0, playerX - playerOffset);
 
         // Smooth camera follow (linear interpolation)
         const smoothed = this.x + (targetX - this.x) * Config.cameraLerp;

@@ -1,5 +1,5 @@
 // Game Scene - main gameplay with parallax, player, obstacles, birds, flag, HUD
-import { Config, getTimeOfDay } from '../config.js';
+import { Config, getTimeOfDay, getCityForLevel, isBeachLevel } from '../config.js';
 import * as TC from '../textureCache.js';
 import { Player } from '../entities/player.js';
 import { Obstacle } from '../entities/obstacle.js';
@@ -31,14 +31,20 @@ export class GameScene {
         }
         this.currentLevel = this.game.state.currentLevel;
 
+        // Beach level detection (must be early — used by parallax and obstacle spawner)
+        this.isBeach = isBeachLevel(this.currentLevel);
+
+        // Time of day: 'day', 'sunset', or 'night'
+        this.timeOfDay = getTimeOfDay(this.currentLevel);
+
         // Create player (pass level for speed multiplier)
         this.player = new Player(charType, this.currentLevel);
 
         // Create camera
         this.camera = new Camera();
 
-        // Create parallax (pass level for sunset mode)
-        this.parallax = new ParallaxSystem(this.currentLevel);
+        // Create parallax (pass level for sunset/beach mode)
+        this.parallax = new ParallaxSystem(this.currentLevel, this.isBeach);
 
         // Create flag - distancia basada en nivel
         const groundSurface = Config.groundSurface;
@@ -67,7 +73,7 @@ export class GameScene {
 
         // Generate obstacles (use flag position + buffer as level width)
         const levelSpawnWidth = flagX + 1500;
-        const obstacleData = generateObstacles(levelSpawnWidth, groundSurface, exclusionZones);
+        const obstacleData = generateObstacles(levelSpawnWidth, groundSurface, exclusionZones, this.isBeach);
         this.obstacles = obstacleData.map(o =>
             new Obstacle(o.type, o.x, o.groundSurface, charType)
         );
@@ -126,42 +132,49 @@ export class GameScene {
             marker.treeObstacle = treeObs;
         }
 
-        // Welcome signs at specific levels - 2 lines, near start
+        // Welcome signs - dynamic from CITY_DATA
         this.welcomeSigns = [];
         const signX = 20 / Config.metersPerPixel; // 20m from start
-        if (this.currentLevel === 1) {
+        const cityData = getCityForLevel(this.currentLevel);
+        if (cityData) {
             this.welcomeSigns.push({
                 x: signX,
                 line1Tex: TC.renderText('BIENVENIDOS A'),
-                line2Tex: TC.renderText('MONTEVIDEO'),
-            });
-        } else if (this.currentLevel === 6) {
-            this.welcomeSigns.push({
-                x: signX,
-                line1Tex: TC.renderText('BIENVENIDOS A'),
-                line2Tex: TC.renderText('CIUDAD DE LA COSTA'),
-            });
-        } else if (this.currentLevel === 12) {
-            this.welcomeSigns.push({
-                x: signX,
-                line1Tex: TC.renderText('BIENVENIDOS A LA'),
-                line2Tex: TC.renderText('REPUBLICA DEL PINAR'),
-            });
-        } else if (this.currentLevel === 18) {
-            this.welcomeSigns.push({
-                x: signX,
-                line1Tex: TC.renderText('BIENVENIDOS A'),
-                line2Tex: TC.renderText('JAUREGUIBERRY'),
+                line2Tex: TC.renderText(cityData.name.toUpperCase()),
             });
         }
 
-        // Time of day: 'day', 'sunset', or 'night'
-        this.timeOfDay = getTimeOfDay(this.currentLevel);
-
-        // Light poles (decorative, every ~600px)
+        // Light poles (decorative, every ~600px) - not on beach levels
         this.lightPoles = [];
-        for (let x = 300; x < flagX; x += 600) {
-            this.lightPoles.push({ x });
+        if (!this.isBeach) {
+            for (let x = 300; x < flagX; x += 600) {
+                this.lightPoles.push({ x });
+            }
+        }
+
+        // Bonfires (beach + night only) with optional hippie NPC
+        this.bonfires = [];
+        this.hippies = [];
+        if (this.isBeach && this.timeOfDay === 'night') {
+            const bonfireCount = 2 + Math.floor(Math.random() * 2); // 2-3 bonfires
+            for (let i = 0; i < bonfireCount; i++) {
+                const bx = 800 + (flagX / bonfireCount) * i + Math.random() * 400;
+                this.bonfires.push({
+                    x: bx,
+                    frame: 0,
+                    timer: Math.random() * 0.2,
+                    // Spark particles
+                    sparks: [],
+                });
+                // 40% chance of hippie next to each bonfire
+                if (Math.random() < 0.4) {
+                    this.hippies.push({
+                        x: bx - 70 - Math.random() * 20,
+                        frame: 0,
+                        timer: Math.random() * 0.5,
+                    });
+                }
+            }
         }
 
         // Parents next to the flag
@@ -419,6 +432,44 @@ export class GameScene {
             this.dogFrame = 1 - this.dogFrame; // Toggle 0/1
         }
 
+        // Bonfire animation + sparks
+        for (const bf of this.bonfires) {
+            bf.timer += dt;
+            if (bf.timer >= 0.15) {
+                bf.timer -= 0.15;
+                bf.frame = (bf.frame + 1) % 4;
+            }
+            // Spawn sparks occasionally
+            if (Math.random() < dt * 8) {
+                bf.sparks.push({
+                    x: bf.x + (Math.random() - 0.5) * 20,
+                    y: 0,
+                    vy: -40 - Math.random() * 60,
+                    vx: (Math.random() - 0.5) * 20,
+                    alpha: 1.0,
+                    life: 0.5 + Math.random() * 0.5,
+                });
+            }
+            // Update sparks
+            for (let i = bf.sparks.length - 1; i >= 0; i--) {
+                const sp = bf.sparks[i];
+                sp.y += sp.vy * dt;
+                sp.x += sp.vx * dt;
+                sp.life -= dt;
+                sp.alpha = Math.max(0, sp.life / 1.0);
+                if (sp.life <= 0) bf.sparks.splice(i, 1);
+            }
+        }
+
+        // Hippie animation
+        for (const hp of this.hippies) {
+            hp.timer += dt;
+            if (hp.timer >= 0.5) {
+                hp.timer -= 0.5;
+                hp.frame = 1 - hp.frame;
+            }
+        }
+
 
 
         // Track previous state for jump sound
@@ -577,13 +628,13 @@ export class GameScene {
         this.joggers = this.joggers.filter(j => j.alive && j.x > cullX);
         this.skaters = this.skaters.filter(s => s.alive && s.x > cullX);
 
-        // Spawn joggers/skaters (level 3+, alternating)
+        // Spawn joggers/skaters (level 3+, alternating; no skaters on beach)
         if (this.currentLevel >= Config.joggerMinLevel) {
             this.joggerSpawnTimer += dt;
             if (this.joggerSpawnTimer >= this.joggerNextSpawnAt) {
                 this.joggerSpawnTimer = 0;
                 this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
-                if (this.npcSpawnToggle) {
+                if (this.npcSpawnToggle && !this.isBeach) {
                     this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
                 } else {
                     this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
@@ -610,20 +661,22 @@ export class GameScene {
             const obstAABB = obstacle.getAABB();
             if (!aabbOverlap(playerAABB, obstAABB)) continue;
 
-            if (obstacle.type === 'tree') {
-                // Tree: only collides when jumping (canopy is above standing player)
+            if (obstacle.type === 'tree' || obstacle.type === 'beachUmbrella') {
+                // Tree/umbrella: only collides when jumping (canopy is above standing player)
                 if (!this.player.isOnGround) {
+                    // Stop upward movement immediately - player falls down
+                    this.player.vy = 0;
                     if (this.player.tripAndFall()) {
                         obstacle.startShake();
                         this.game.music.playHitSound();
                     }
                     break;
                 }
-                // Standing player walks under the tree — no collision
+                // Standing player walks under — no collision
             } else if (obstacle.type === 'pothole') {
                 // Pothole: special fall-in animation
                 if (this.player.fallInHole(obstacle)) {
-                    this.game.music.playHitSound();
+                    this.game.music.playPotholeSound();
                 }
                 break;
             } else if (obstacle.type === 'trashCan') {
@@ -667,6 +720,28 @@ export class GameScene {
         }
 
         // Los pájaros son decorativos, no quitan vidas
+
+        // Collision: player vs bonfires (trip and fall)
+        for (const bf of this.bonfires) {
+            const bfAABB = { x: bf.x, y: Config.groundSurface + 24, hw: 24, hh: 18 };
+            if (aabbOverlap(playerAABB, bfAABB)) {
+                if (this.player.tripAndFall()) {
+                    this.game.music.playHitSound();
+                }
+                break;
+            }
+        }
+
+        // Collision: player vs hippies (trip and fall)
+        for (const hp of this.hippies) {
+            const hpAABB = { x: hp.x, y: Config.groundSurface + 18, hw: 18, hh: 18 };
+            if (aabbOverlap(playerAABB, hpAABB)) {
+                if (this.player.tripAndFall()) {
+                    this.game.music.playHitSound();
+                }
+                break;
+            }
+        }
 
         // Level complete: player passes the flag position
         if (this.player.x >= this.flag.x) {
@@ -716,11 +791,22 @@ export class GameScene {
             skater.draw(ctx, camX);
         }
 
+        // Draw bonfires (with glow and sparks)
+        this._drawBonfires(ctx, camX);
+
+        // Draw hippies
+        this._drawHippies(ctx, camX);
+
         // Draw flag
         this.flag.draw(ctx, camX);
 
         // Draw parents next to flag
         this.parents.draw(ctx, camX);
+
+        // Draw birds (behind player)
+        for (const bird of this.birds) {
+            bird.draw(ctx, camX);
+        }
 
         // Draw player
         this.player.draw(ctx, camX);
@@ -728,11 +814,6 @@ export class GameScene {
         // Draw floating hearts during family hug
         if (this._familyHugStarted && this._hugHearts && this._hugHearts.length > 0) {
             this._drawHugHearts(ctx, camX);
-        }
-
-        // Draw birds
-        for (const bird of this.birds) {
-            bird.draw(ctx, camX);
         }
 
         // Draw heart pickups
@@ -1212,6 +1293,70 @@ export class GameScene {
             }
 
             ctx.drawImage(poleTex, poleScreenX, poleScreenY, poleW, poleH);
+        }
+    }
+
+    _drawBonfires(ctx, cameraX) {
+        if (this.bonfires.length === 0) return;
+        const scale = Config.pixelScale;
+        const sidewalkH = 16 * scale;
+
+        for (const bf of this.bonfires) {
+            const tex = TC.bonfireFrames[bf.frame];
+            const w = tex.width * scale;
+            const h = tex.height * scale;
+            const screenX = bf.x - cameraX - w / 2;
+            const screenY = Config.sceneHeight - sidewalkH - h;
+
+            // Only draw if on screen
+            if (screenX > -w && screenX < Config.sceneWidth + w) {
+                // Draw warm glow circle behind bonfire
+                ctx.save();
+                const glowCX = screenX + w / 2;
+                const glowCY = screenY + h * 0.4;
+                const glowR = 100;
+                const glow = ctx.createRadialGradient(glowCX, glowCY, 10, glowCX, glowCY, glowR);
+                glow.addColorStop(0, 'rgba(255,160,40,0.2)');
+                glow.addColorStop(0.5, 'rgba(255,100,20,0.08)');
+                glow.addColorStop(1, 'rgba(255,60,10,0)');
+                ctx.fillStyle = glow;
+                ctx.fillRect(glowCX - glowR, glowCY - glowR, glowR * 2, glowR * 2);
+                ctx.restore();
+
+                // Draw bonfire sprite
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(tex, screenX, screenY, w, h);
+
+                // Draw sparks
+                for (const sp of bf.sparks) {
+                    ctx.save();
+                    ctx.globalAlpha = sp.alpha;
+                    ctx.fillStyle = Math.random() > 0.5 ? '#FFD700' : '#FF6600';
+                    const spX = sp.x - cameraX;
+                    const spY = screenY + sp.y;
+                    ctx.fillRect(spX, spY, 2, 2);
+                    ctx.restore();
+                }
+            }
+        }
+    }
+
+    _drawHippies(ctx, cameraX) {
+        if (this.hippies.length === 0) return;
+        const scale = Config.pixelScale;
+        const sidewalkH = 16 * scale;
+
+        for (const hp of this.hippies) {
+            const tex = TC.hippieFrames[hp.frame];
+            const w = tex.width * scale;
+            const h = tex.height * scale;
+            const screenX = hp.x - cameraX - w / 2;
+            const screenY = Config.sceneHeight - sidewalkH - h;
+
+            if (screenX > -w && screenX < Config.sceneWidth + w) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(tex, screenX, screenY, w, h);
+            }
         }
     }
 

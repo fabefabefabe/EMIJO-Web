@@ -19,13 +19,19 @@ function isInExclusionZone(x, exclusionZones) {
 
 /**
  * Pick a random obstacle type.
- * 15% tree, 85% random ground type.
+ * 15% tree/umbrella, 85% random ground type.
+ * @param {boolean} isBeach - If true, use beach variants
  */
-function pickRandomType() {
+function pickRandomType(isBeach = false) {
+    const treeType = isBeach ? 'beachUmbrella' : 'tree';
+    const groundTypes = isBeach
+        ? GROUND_TYPES.map(t => t === 'rock' ? 'beachBall' : t)
+        : GROUND_TYPES;
+
     if (Math.random() < TREE_CHANCE) {
-        return 'tree';
+        return treeType;
     }
-    return GROUND_TYPES[Math.floor(Math.random() * GROUND_TYPES.length)];
+    return groundTypes[Math.floor(Math.random() * groundTypes.length)];
 }
 
 /**
@@ -35,9 +41,13 @@ function pickRandomType() {
  * @param {Array<{xMin: number, xMax: number}>} [exclusionZones] - Areas where obstacles must not spawn.
  * @returns {Array<{type: string, x: number, y: number}>}
  */
-export function generateObstacles(levelWidth, groundSurface, exclusionZones = []) {
+export function generateObstacles(levelWidth, groundSurface, exclusionZones = [], isBeach = false) {
     const obstacles = [];
     let currentX = Config.startBuffer;
+
+    const groundTypes = isBeach
+        ? GROUND_TYPES.map(t => t === 'rock' ? 'beachBall' : t)
+        : GROUND_TYPES;
 
     while (currentX < levelWidth - Config.endBuffer) {
         const spacing = Config.minObstacleSpacing +
@@ -49,7 +59,7 @@ export function generateObstacles(levelWidth, groundSurface, exclusionZones = []
         // Skip if inside an exclusion zone
         if (isInExclusionZone(currentX, exclusionZones)) continue;
 
-        const type = pickRandomType();
+        const type = pickRandomType(isBeach);
         obstacles.push({ type, x: currentX, groundSurface });
 
         // 15% chance to add a consecutive obstacle (close together but jumpable)
@@ -58,8 +68,8 @@ export function generateObstacles(levelWidth, groundSurface, exclusionZones = []
             const secondX = currentX + closeSpacing;
             if (!isInExclusionZone(secondX, exclusionZones)) {
                 currentX = secondX;
-                // Second obstacle is always a ground type (not tree)
-                const secondType = GROUND_TYPES[Math.floor(Math.random() * GROUND_TYPES.length)];
+                // Second obstacle is always a ground type (not tree/umbrella)
+                const secondType = groundTypes[Math.floor(Math.random() * groundTypes.length)];
                 obstacles.push({ type: secondType, x: currentX, groundSurface });
             }
         }

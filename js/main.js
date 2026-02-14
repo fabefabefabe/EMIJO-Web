@@ -8,6 +8,7 @@ import { GameScene } from './scenes/gameScene.js';
 import { LevelCompleteScene } from './scenes/levelCompleteScene.js';
 import { EnterInitialsScene } from './scenes/enterInitialsScene.js';
 import { HallOfFameScene } from './scenes/hallOfFameScene.js';
+import { CongratulationsScene } from './scenes/congratulationsScene.js';
 import { music } from './audio/music.js';
 
 // --- Canvas Setup ---
@@ -69,6 +70,7 @@ const scenes = {
     levelComplete: new LevelCompleteScene(game),
     enterInitials: new EnterInitialsScene(game),
     hallOfFame: new HallOfFameScene(game),
+    congratulations: new CongratulationsScene(game),
 };
 
 let currentScene = null;
@@ -92,6 +94,9 @@ function setScene(name) {
     } else if (name === 'hallOfFame') {
         scenes.hallOfFame = new HallOfFameScene(game);
         currentScene = scenes.hallOfFame;
+    } else if (name === 'congratulations') {
+        scenes.congratulations = new CongratulationsScene(game);
+        currentScene = scenes.congratulations;
     } else {
         currentScene = scene;
     }

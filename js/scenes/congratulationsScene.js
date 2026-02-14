@@ -1,9 +1,8 @@
-// Level Complete Scene - victory screen with celebration
+// Congratulations Scene - shown after completing the final level (90)
 import { Config } from '../config.js';
-
 import * as TC from '../textureCache.js';
 
-export class LevelCompleteScene {
+export class CongratulationsScene {
     constructor(game) {
         this.game = game;
     }
@@ -13,18 +12,33 @@ export class LevelCompleteScene {
         this.characterName = charType === 'jo' ? 'JO' : 'EMI';
         this.portrait = TC.getCharacterTextures(charType).portrait;
 
-        // Obtener nivel actual
-        this.currentLevel = this.game.state.currentLevel || 1;
-
-        // Stars
+        // Stars (more than level complete — big celebration!)
         this.stars = [];
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 60; i++) {
             this.stars.push({
                 x: Math.random() * Config.sceneWidth,
                 y: Math.random() * Config.sceneHeight,
                 alpha: Math.random(),
-                speed: 0.5 + Math.random() * 1.0,
+                speed: 0.5 + Math.random() * 1.5,
                 dir: Math.random() > 0.5 ? 1 : -1,
+                size: 2 + Math.floor(Math.random() * 3),
+                color: Math.random() > 0.5 ? '#FFD700' : '#FFFFFF', // gold or white
+            });
+        }
+
+        // Confetti particles
+        this.confetti = [];
+        const confettiColors = ['#FF4444', '#44FF44', '#4444FF', '#FFD700', '#FF44FF', '#44FFFF'];
+        for (let i = 0; i < 40; i++) {
+            this.confetti.push({
+                x: Math.random() * Config.sceneWidth,
+                y: -20 - Math.random() * Config.sceneHeight,
+                vy: 40 + Math.random() * 80,
+                vx: (Math.random() - 0.5) * 60,
+                rot: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 4,
+                color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+                size: 3 + Math.floor(Math.random() * 4),
             });
         }
 
@@ -37,23 +51,26 @@ export class LevelCompleteScene {
         this.instructionAlpha = 1.0;
         this.instructionDir = -1;
 
-        // Text caches (Spanish) - mostrar nivel completado
-        this._titleText = TC.renderText('NIVEL ' + this.currentLevel + ' COMPLETO!');
+        // Text caches (Spanish)
+        this._titleText = TC.renderText('FELICITACIONES!');
+        this._subtitleText = TC.renderText('RECORRISTE TODA');
+        this._subtitleText2 = TC.renderText('LA COSTA DE URUGUAY!');
         this._congratsText = TC.renderText('BIEN HECHO ' + this.characterName + '!');
         this._continueText = TC.renderText('TOCA O PULSA ENTER');
 
         this.canProceed = false;
         this.proceedTimer = 0;
 
-        // Note: Victory music is played when level completes in gameScene
+        // Play victory music
+        this.game.music.playTrack('victory');
     }
 
     update(dt) {
         this.timer += dt;
 
-        // Allow proceeding after 0.5s
+        // Allow proceeding after 2s (longer pause for celebration)
         this.proceedTimer += dt;
-        if (this.proceedTimer >= 0.5) {
+        if (this.proceedTimer >= 2.0) {
             this.canProceed = true;
         }
 
@@ -64,14 +81,26 @@ export class LevelCompleteScene {
             if (star.alpha >= 1.0) { star.alpha = 1.0; star.dir = -1; }
         }
 
+        // Update confetti
+        for (const c of this.confetti) {
+            c.y += c.vy * dt;
+            c.x += c.vx * dt;
+            c.rot += c.rotSpeed * dt;
+            // Recycle at bottom
+            if (c.y > Config.sceneHeight + 20) {
+                c.y = -20;
+                c.x = Math.random() * Config.sceneWidth;
+            }
+        }
+
         // Bounce portrait
         this.bounceY += this.bounceDir * 30 * dt;
         if (this.bounceY > 10) { this.bounceY = 10; this.bounceDir = -1; }
         if (this.bounceY < -10) { this.bounceY = -10; this.bounceDir = 1; }
 
         // Pulse title scale
-        this.titleScale += this.titleScaleDir * 0.2 * dt;
-        if (this.titleScale > 1.1) { this.titleScale = 1.1; this.titleScaleDir = -1; }
+        this.titleScale += this.titleScaleDir * 0.3 * dt;
+        if (this.titleScale > 1.15) { this.titleScale = 1.15; this.titleScaleDir = -1; }
         if (this.titleScale < 1.0) { this.titleScale = 1.0; this.titleScaleDir = 1; }
 
         // Pulse instruction
@@ -83,20 +112,9 @@ export class LevelCompleteScene {
         const input = this.game.input;
         if (this.canProceed) {
             if (input.consumeKey('Enter') || input.consumeKey('Space')) {
-                this._advance();
+                // Go to enter initials (high score) or hall of fame
+                this.game.setScene('enterInitials');
             }
-        }
-    }
-
-    _advance() {
-        if (this.currentLevel >= Config.maxLevel) {
-            // Final level completed — go to congratulations!
-            this.game.setScene('congratulations');
-        } else {
-            // Avanzar al siguiente nivel
-            this.game.state.currentLevel = this.currentLevel + 1;
-            this.game.music.playTrack('game');
-            this.game.setScene('game');
         }
     }
 
@@ -105,63 +123,86 @@ export class LevelCompleteScene {
         const H = Config.sceneHeight;
         const scale = Config.pixelScale;
 
-        // Dark blue background
-        ctx.fillStyle = '#0d1a33';
+        // Dark blue background with gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#0a0a2e');
+        grad.addColorStop(0.5, '#1a1a4e');
+        grad.addColorStop(1, '#0d1a33');
+        ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
 
         // Stars
         for (const star of this.stars) {
             ctx.save();
             ctx.globalAlpha = star.alpha;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(star.x, star.y, 2, 2);
+            ctx.fillStyle = star.color;
+            ctx.fillRect(star.x, star.y, star.size, star.size);
             ctx.restore();
         }
 
-        // Title "LEVEL COMPLETE!" in gold
-        const titleScale = scale * 1.5 * this.titleScale;
+        // Confetti
+        for (const c of this.confetti) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.rot);
+            ctx.fillStyle = c.color;
+            ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.5);
+            ctx.restore();
+        }
+
+        // Title "FELICITACIONES!" in gold, pulsing
+        const titleScale = scale * 1.8 * this.titleScale;
         const titleW = this._titleText.width * titleScale;
         const titleH = this._titleText.height * titleScale;
         ctx.save();
         ctx.imageSmoothingEnabled = false;
-
-        // Draw title text, then gold tint
-        ctx.drawImage(this._titleText, (W - titleW) / 2, H * 0.18 - titleH / 2, titleW, titleH);
-        // Apply gold tint
+        ctx.drawImage(this._titleText, (W - titleW) / 2, H * 0.12 - titleH / 2, titleW, titleH);
+        // Gold tint
         ctx.globalCompositeOperation = 'source-atop';
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
-        ctx.fillRect((W - titleW) / 2, H * 0.18 - titleH / 2, titleW, titleH);
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
+        ctx.fillRect((W - titleW) / 2, H * 0.12 - titleH / 2, titleW, titleH);
         ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
 
-        // "[NAME] DID IT!" text
-        const congratsScale = scale * 1.0;
+        // Subtitle line 1: "RECORRISTE TODA"
+        const subScale = scale * 1.0;
+        const subW = this._subtitleText.width * subScale;
+        const subH = this._subtitleText.height * subScale;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(this._subtitleText, (W - subW) / 2, H * 0.26 - subH / 2, subW, subH);
+
+        // Subtitle line 2: "LA COSTA DE URUGUAY!"
+        const sub2W = this._subtitleText2.width * subScale;
+        const sub2H = this._subtitleText2.height * subScale;
+        ctx.drawImage(this._subtitleText2, (W - sub2W) / 2, H * 0.34 - sub2H / 2, sub2W, sub2H);
+
+        // "BIEN HECHO [NAME]!"
+        const congratsScale = scale * 0.9;
         const congratsW = this._congratsText.width * congratsScale;
         const congratsH = this._congratsText.height * congratsScale;
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(this._congratsText, (W - congratsW) / 2, H * 0.32 - congratsH / 2, congratsW, congratsH);
+        ctx.drawImage(this._congratsText, (W - congratsW) / 2, H * 0.44 - congratsH / 2, congratsW, congratsH);
 
-        // Character portrait (bouncing)
-        const portraitScale = scale * 2;
+        // Character portrait (bouncing, bigger)
+        const portraitScale = scale * 2.5;
         const pW = this.portrait.width * portraitScale;
         const pH = this.portrait.height * portraitScale;
         ctx.drawImage(this.portrait,
             (W - pW) / 2,
-            H * 0.55 - pH / 2 + this.bounceY,
+            H * 0.62 - pH / 2 + this.bounceY,
             pW, pH);
 
-        // "PRESS ENTER TO CONTINUE"
+        // "TOCA O PULSA ENTER"
         if (this.canProceed) {
             const instrScale = scale * 0.7;
             const instrW = this._continueText.width * instrScale;
             const instrH = this._continueText.height * instrScale;
             ctx.save();
             ctx.globalAlpha = this.instructionAlpha;
-            ctx.drawImage(this._continueText, (W - instrW) / 2, H * 0.85 - instrH / 2, instrW, instrH);
+            ctx.drawImage(this._continueText, (W - instrW) / 2, H * 0.88 - instrH / 2, instrW, instrH);
             ctx.restore();
         }
 
-        // Draw music toggle button (top-right corner)
+        // Music toggle button (top-right)
         const margin = 10;
         const isMuted = this.game.state.musicMuted;
         const icon = isMuted ? TC.musicOffIcon : TC.musicOnIcon;
@@ -169,10 +210,7 @@ export class LevelCompleteScene {
         const iconH = icon.height * scale;
         const iconX = W - margin - iconW;
         const iconY = margin;
-
         ctx.drawImage(icon, iconX, iconY, iconW, iconH);
-
-        // Store bounds for click detection
         this._musicBounds = { x: iconX, y: iconY, w: iconW, h: iconH };
     }
 
@@ -184,7 +222,7 @@ export class LevelCompleteScene {
         }
 
         if (this.canProceed) {
-            this._advance();
+            this.game.setScene('enterInitials');
         }
     }
 

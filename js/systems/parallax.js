@@ -17,9 +17,10 @@ import { Gardener } from '../entities/gardener.js';
  */
 
 export class ParallaxSystem {
-    constructor(level = 1) {
+    constructor(level = 1, isBeach = false) {
         // Time of day: 'day', 'sunset', or 'night'
         this.timeOfDay = getTimeOfDay(level);
+        this.isBeach = isBeach;
 
         // Sea animation
         this.seaAnimTimer = 0;
@@ -30,36 +31,64 @@ export class ParallaxSystem {
         this.sunFrame = 0;
 
         // Boats on the horizon (random X positions across visible area)
-        // Con scrollFactor 0.10, necesitamos posiciones world-space distribuidas
         this.boats = [];
-        const boatCount = 8; // Más barcos para mejor cobertura
-        const boatSpread = Config.levelWidth * 0.15; // Rango random más amplio
+        const boatCount = 8;
         for (let i = 0; i < boatCount; i++) {
             this.boats.push({
-                x: Math.random() * Config.levelWidth * 1.5, // Distribuir en rango amplio
+                x: Math.random() * Config.levelWidth * 1.5,
             });
         }
 
-        // Gardener NPCs (alternating male/female)
+        // Gardener NPCs (alternating male/female) — not on beach
         this.gardeners = [];
-        const gardenerCount = 6;
-        for (let i = 0; i < gardenerCount; i++) {
-            const x = 200 + (Config.levelWidth / gardenerCount) * i + Math.random() * 100;
-            const isFemale = i % 2 === 1;
-            this.gardeners.push(new Gardener(x, isFemale));
+        if (!isBeach) {
+            const gardenerCount = 6;
+            for (let i = 0; i < gardenerCount; i++) {
+                const x = 200 + (Config.levelWidth / gardenerCount) * i + Math.random() * 100;
+                const isFemale = i % 2 === 1;
+                this.gardeners.push(new Gardener(x, isFemale));
+            }
         }
 
-        // Flores aleatorias sobre los arbustos - más cantidad y variedad
+        // Sandcastle kids (beach replacement for gardeners)
+        this.sandcastles = [];
+        if (isBeach) {
+            const castleCount = 5;
+            for (let i = 0; i < castleCount; i++) {
+                this.sandcastles.push({
+                    x: 300 + (Config.levelWidth / castleCount) * i + Math.random() * 200,
+                    frame: 0,
+                    timer: Math.random() * 0.6, // offset animation
+                });
+            }
+        }
+
+        // Flores aleatorias sobre los arbustos — not on beach
         this.flowers = [];
-        const flowerColors = ['red', 'yellow', 'pink', 'white', 'purple', 'orange'];
-        const flowerCount = 150; // Increased from 50 to 150
-        for (let i = 0; i < flowerCount; i++) {
-            this.flowers.push({
-                x: Math.random() * Config.levelWidth,
-                color: flowerColors[Math.floor(Math.random() * flowerColors.length)],
-                offsetY: Math.random() * 25, // Increased variation (was 15)
-                scale: 0.8 + Math.random() * 0.4, // Variable size 0.8x to 1.2x
-            });
+        if (!isBeach) {
+            const flowerColors = ['red', 'yellow', 'pink', 'white', 'purple', 'orange'];
+            const flowerCount = 150;
+            for (let i = 0; i < flowerCount; i++) {
+                this.flowers.push({
+                    x: Math.random() * Config.levelWidth,
+                    color: flowerColors[Math.floor(Math.random() * flowerColors.length)],
+                    offsetY: Math.random() * 25,
+                    scale: 0.8 + Math.random() * 0.4,
+                });
+            }
+        }
+
+        // Sand dunes (beach only, decorative bumps)
+        this.dunes = [];
+        if (isBeach) {
+            const duneCount = 30;
+            for (let i = 0; i < duneCount; i++) {
+                this.dunes.push({
+                    x: Math.random() * Config.levelWidth,
+                    width: 20 + Math.random() * 30,
+                    height: 3 + Math.random() * 5,
+                });
+            }
         }
     }
 
@@ -84,6 +113,15 @@ export class ParallaxSystem {
         // Update gardener NPCs
         for (const g of this.gardeners) {
             g.update(dt);
+        }
+
+        // Update sandcastle kids animation
+        for (const sc of this.sandcastles) {
+            sc.timer += dt;
+            if (sc.timer >= 0.6) {
+                sc.timer -= 0.6;
+                sc.frame = (sc.frame + 1) % 2;
+            }
         }
     }
 
@@ -133,15 +171,58 @@ export class ParallaxSystem {
         const seaScreenY = H - sidewalkH - bushLargeH - seaH + 60; // +60 para solapar con arbustos
         this._drawTileLayerFillDown(ctx, skyTex, 0.05, cameraX, scale, 0, W, seaScreenY);
 
-        // --- Layer 2: Sun (hidden at night, lower at sunset, orange at sunset) ---
-        if (this.timeOfDay !== 'night') {
-            const sunTex = this.timeOfDay === 'sunset'
-                ? TC.sunSunsetFrames[this.sunFrame]
-                : TC.sunFrames[this.sunFrame];
+        // --- Layer 2: Sun / Moon ---
+        if (this.timeOfDay === 'night') {
+            // Moon (crescent) top-right area
+            const moonTex = TC.moonTex;
+            const moonW = moonTex.width * scale;
+            const moonH = moonTex.height * scale;
+            const moonBaseX = W - moonW - 60;
+            const moonBaseY = 25;
+            const moonOffsetX = Math.round(cameraX * 0.02);
+            ctx.imageSmoothingEnabled = false;
+            // Subtle glow around moon
+            ctx.save();
+            const moonCX = Math.round(moonBaseX - moonOffsetX) + moonW / 2;
+            const moonCY = moonBaseY + moonH / 2;
+            const glowRadius = moonW * 1.5;
+            const glow = ctx.createRadialGradient(moonCX, moonCY, moonW * 0.3, moonCX, moonCY, glowRadius);
+            glow.addColorStop(0, 'rgba(200,200,255,0.15)');
+            glow.addColorStop(1, 'rgba(200,200,255,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(moonCX - glowRadius, moonCY - glowRadius, glowRadius * 2, glowRadius * 2);
+            ctx.restore();
+            ctx.drawImage(moonTex, Math.round(moonBaseX - moonOffsetX), moonBaseY, moonW, moonH);
+        } else if (this.timeOfDay === 'sunset') {
+            // Sunset: large half-sun on the horizon with reflection
+            const horizonTex = TC.sunsetHorizonFrames[this.sunFrame];
+            const horizW = horizonTex.width * scale;
+            const horizH = horizonTex.height * scale;
+            // Position centered on the sea/sky boundary
+            const sunBaseX = W - horizW - 80;
+            const sunOffsetX = Math.round(cameraX * 0.02);
+            const sunX = Math.round(sunBaseX - sunOffsetX);
+            // Place bottom of sun at sea top
+            const sunY = seaScreenY - horizH + 4;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(horizonTex, sunX, sunY, horizW, horizH);
+
+            // Reflection: flip vertically, draw below with transparency and wave distortion
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            const reflY = seaScreenY + 4;
+            // Draw flipped
+            ctx.translate(sunX, reflY);
+            ctx.scale(1, -1);
+            ctx.drawImage(horizonTex, 0, 0, horizW, horizH);
+            ctx.restore();
+        } else {
+            // Day: normal sun (now 18x18, bigger!)
+            const sunTex = TC.sunFrames[this.sunFrame];
             const sunW = sunTex.width * scale;
             const sunH = sunTex.height * scale;
             const sunBaseX = W - sunW - 45;
-            const sunBaseY = this.timeOfDay === 'sunset' ? 160 : 30;
+            const sunBaseY = 30;
             const sunOffsetX = Math.round(cameraX * 0.02);
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(sunTex, Math.round(sunBaseX - sunOffsetX), sunBaseY, sunW, sunH);
@@ -152,10 +233,9 @@ export class ParallaxSystem {
 
         // --- Layer 4: Boats on horizon (DESPUÉS del mar para que se vean) ---
         const boatTex = TC.boatTexture;
-        const boatScale = scale * 1.2; // Barcos un poco más grandes
+        const boatScale = scale * 1.2;
         const boatW = boatTex.width * boatScale;
         const boatH = boatTex.height * boatScale;
-        // Barcos en el horizonte - sobre el mar
         const boatScreenY = seaScreenY - boatH * 0.3;
         ctx.imageSmoothingEnabled = false;
         for (const boat of this.boats) {
@@ -165,28 +245,81 @@ export class ParallaxSystem {
             }
         }
 
-        // --- Layer 5: Large bushes (background, scrollFactor 0.30) ---
-        // Large bushes sit on top of sidewalk
-        const bushLargeScreenY = H - sidewalkH - bushLargeH;
-        this._drawTileLayer(ctx, bushLargeTex, 0.30, cameraX, scale, bushLargeScreenY, W);
+        if (this.isBeach) {
+            // --- Beach mode: no bushes, sand ground, sandcastles, dunes ---
 
-        // --- Layer 6: Gardener NPCs (scrollFactor 0.35, middle) ---
-        for (const g of this.gardeners) {
-            g.draw(ctx, cameraX);
+            // Select sand tile based on time of day
+            let sandTex;
+            if (this.timeOfDay === 'night') {
+                sandTex = TC.sandNightTile;
+            } else if (this.timeOfDay === 'sunset') {
+                sandTex = TC.sandSunsetTile;
+            } else {
+                sandTex = TC.sandTile;
+            }
+
+            // Draw sand tiles as wider ground area (covers bush + sidewalk area)
+            const sandH = sandTex.height * scale;
+            const sandScreenY = H - sidewalkH - sandH;
+            this._drawTileLayer(ctx, sandTex, 0.45, cameraX, scale, sandScreenY, W);
+
+            // --- Sandcastle kids (scrollFactor 0.35, like gardeners) ---
+            if (TC.sandcastle1Tex) {
+                for (const sc of this.sandcastles) {
+                    const tex = sc.frame === 0 ? TC.sandcastle1Tex : TC.sandcastle2Tex;
+                    const scW = tex.width * scale;
+                    const scH = tex.height * scale;
+                    const scX = Math.round(sc.x - cameraX * 0.35 - scW / 2);
+                    const scY = H - sidewalkH - scH;
+                    if (scX > -scW && scX < W + scW) {
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(tex, scX, scY, scW, scH);
+                    }
+                }
+            }
+
+            // --- Sand dunes (decorative, scrollFactor 0.45) ---
+            if (this.dunes.length > 0) {
+                const duneColor = this.timeOfDay === 'night' ? 'rgba(75,70,58,0.6)'
+                    : this.timeOfDay === 'sunset' ? 'rgba(190,160,110,0.5)'
+                    : 'rgba(220,200,160,0.5)';
+                for (const dune of this.dunes) {
+                    const dx = Math.round(dune.x - cameraX * 0.45);
+                    if (dx > -60 && dx < W + 60) {
+                        ctx.fillStyle = duneColor;
+                        ctx.beginPath();
+                        ctx.ellipse(dx, H - sidewalkH, dune.width, dune.height, 0, Math.PI, 0);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // --- Sand "sidewalk" layer ---
+            this._drawTileLayer(ctx, sandTex, 1.0, cameraX, scale, H - sidewalkH, W);
+
+        } else {
+            // --- Normal mode: bushes, gardeners, flowers, sidewalk ---
+
+            // --- Layer 5: Large bushes (background, scrollFactor 0.30) ---
+            const bushLargeScreenY = H - sidewalkH - bushLargeH;
+            this._drawTileLayer(ctx, bushLargeTex, 0.30, cameraX, scale, bushLargeScreenY, W);
+
+            // --- Layer 6: Gardener NPCs (scrollFactor 0.35, middle) ---
+            for (const g of this.gardeners) {
+                g.draw(ctx, cameraX);
+            }
+
+            // --- Layer 7: Small bushes (foreground, scrollFactor 0.45) ---
+            const bushScreenY = H - sidewalkH - bushH;
+            this._drawTileLayer(ctx, bushTex, 0.45, cameraX, scale, bushScreenY, W);
+
+            // --- Layer 7.5: Flores sobre los arbustos ---
+            this._drawFlowers(ctx, cameraX, scale, bushScreenY, W);
+
+            // --- Layer 8: Sidewalk (scrollFactor 1.00) ---
+            const swScreenY = H - sidewalkH;
+            this._drawTileLayer(ctx, swTex, 1.0, cameraX, scale, swScreenY, W);
         }
-
-        // --- Layer 7: Small bushes (foreground, scrollFactor 0.45) ---
-        // Small bushes sit on top of sidewalk
-        const bushScreenY = H - sidewalkH - bushH;
-        this._drawTileLayer(ctx, bushTex, 0.45, cameraX, scale, bushScreenY, W);
-
-        // --- Layer 7.5: Flores sobre los arbustos ---
-        this._drawFlowers(ctx, cameraX, scale, bushScreenY, W);
-
-        // --- Layer 8: Sidewalk (scrollFactor 1.00) ---
-        // Sidewalk at bottom of screen
-        const swScreenY = H - sidewalkH;
-        this._drawTileLayer(ctx, swTex, 1.0, cameraX, scale, swScreenY, W);
     }
 
     /**

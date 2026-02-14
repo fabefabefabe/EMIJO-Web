@@ -7,22 +7,26 @@ import { rock as rockBaseData } from '../sprites/obstaclePixels.js';
 
 // Body sizes in pixel art pixels (before scaling)
 const BODY_SIZES = {
-    rock:      { w: 14, h: 10 },
-    bench:     { w: 22, h: 14 },
-    trashCan:  { w: 10, h: 18 },
-    pothole:   { w: 18, h: 8 },
-    cooler:    { w: 16, h: 12 },
-    tree:      { w: 36, h: 40 },  // canopy AABB (doubled)
+    rock:           { w: 14, h: 10 },
+    bench:          { w: 22, h: 14 },
+    trashCan:       { w: 10, h: 18 },
+    pothole:        { w: 18, h: 8 },
+    cooler:         { w: 16, h: 12 },
+    tree:           { w: 36, h: 40 },  // canopy AABB (doubled)
+    beachBall:      { w: 12, h: 10 },  // like rock
+    beachUmbrella:  { w: 28, h: 35 },  // canopy AABB (like tree)
 };
 
 // Texture lookup (default textures)
 const TEXTURES = {
-    rock:      () => TC.rock,
-    bench:     () => TC.bench,
-    trashCan:  () => TC.trashCan,
-    pothole:   () => TC.potholeFlat,
-    cooler:    () => TC.cooler,
-    tree:      () => TC.tree,
+    rock:           () => TC.rock,
+    bench:          () => TC.bench,
+    trashCan:       () => TC.trashCan,
+    pothole:        () => TC.potholeFlat,
+    cooler:         () => TC.cooler,
+    tree:           () => TC.tree,
+    beachBall:      () => TC.beachBallTex,
+    beachUmbrella:  () => TC.beachUmbrellaTex,
 };
 
 export class Obstacle {
@@ -78,12 +82,18 @@ export class Obstacle {
             this.eyesOpen = true;
         }
 
-        // --- Tree: shake + falling leaves state ---
+        // --- Tree / beach umbrella: shake + falling leaves state ---
         if (type === 'tree') {
             this.shaking = false;
             this.shakeTimer = 0;
             this.shakeDuration = 0.6;
             this.leaves = []; // falling leaf particles
+        }
+        if (type === 'beachUmbrella') {
+            this.shaking = false;
+            this.shakeTimer = 0;
+            this.shakeDuration = 0.5;
+            this.leaves = []; // not used but keeps tree-like interface
         }
 
         // --- Y positioning ---
@@ -95,9 +105,12 @@ export class Obstacle {
         } else if (type === 'tree') {
             // Tree sprite bottom on ground, AABB at canopy
             this.y = groundSurface + spriteH / 2;
-            // Tree is 100px * 3 = 300px. Canopy = rows 0-41 = 42*3 = 126px
-            // Canopy center Y (game coords) = groundSurface + 300 - 63 = groundSurface + 237
             this.canopyY = groundSurface + spriteH - (42 * scale) / 2;
+        } else if (type === 'beachUmbrella') {
+            // Umbrella bottom on ground, collision at canopy top half
+            this.y = groundSurface + spriteH / 2;
+            // Canopy is top ~25 rows of 50. Center at spriteH - 25*scale/2
+            this.canopyY = groundSurface + spriteH - (25 * scale) / 2;
         } else {
             // Ground obstacles: center based on sprite height
             this.y = groundSurface + spriteH / 2;
@@ -181,10 +194,10 @@ export class Obstacle {
             this.leaves.push({
                 x: this.x + (Math.random() - 0.5) * 100,
                 screenY: 0, // will be set relative to canopy top
-                vy: 20 + Math.random() * 40,     // fall speed (screen pixels/s)
-                vx: (Math.random() - 0.5) * 30,  // horizontal drift
+                vy: 40 + Math.random() * 80,     // fall speed (screen pixels/s) - doubled
+                vx: (Math.random() - 0.5) * 60,  // horizontal drift - doubled
                 rotation: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 4,
+                rotSpeed: (Math.random() - 0.5) * 8, // doubled
                 alpha: 1.0,
                 startDelay: Math.random() * 0.3,  // stagger leaf drops
                 grounded: false,
@@ -244,8 +257,8 @@ export class Obstacle {
             }
         }
 
-        // Tree shake animation + falling leaves
-        if (this.type === 'tree' && this.shaking) {
+        // Tree / umbrella shake animation + falling leaves
+        if ((this.type === 'tree' || this.type === 'beachUmbrella') && this.shaking) {
             this.shakeTimer += dt;
             if (this.shakeTimer >= this.shakeDuration) {
                 this.shaking = false;
@@ -275,7 +288,7 @@ export class Obstacle {
                     }
                 } else {
                     // Grounded leaves fade slowly
-                    leaf.alpha -= dt * 0.15;
+                    leaf.alpha -= dt * 0.30;
                     if (leaf.alpha <= 0) {
                         this.leaves.splice(i, 1);
                     }
@@ -296,8 +309,8 @@ export class Obstacle {
             return { x: this.x, y: this.y, hw: 0, hh: 0 };
         }
 
-        // Tree: AABB only at canopy
-        if (this.type === 'tree') {
+        // Tree / beach umbrella: AABB only at canopy
+        if (this.type === 'tree' || this.type === 'beachUmbrella') {
             return {
                 x: this.x,
                 y: this.canopyY,
@@ -358,8 +371,8 @@ export class Obstacle {
 
         ctx.imageSmoothingEnabled = false;
 
-        // Tree: shake effect (oscillate X)
-        if (this.type === 'tree' && this.shaking) {
+        // Tree / umbrella: shake effect (oscillate X)
+        if ((this.type === 'tree' || this.type === 'beachUmbrella') && this.shaking) {
             const progress = this.shakeTimer / this.shakeDuration;
             const shakeAmount = 4 * (1 - progress) * Math.sin(this.shakeTimer * 30);
             screenX += shakeAmount;

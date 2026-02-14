@@ -19,8 +19,9 @@ import { joggerRun1, joggerRun2, joggerFallen } from './sprites/joggerPixels.js'
 import { flag as flagData } from './sprites/flagPixels.js';
 import { frame1 as birdFrame1, frame2 as birdFrame2, frame3 as birdFrame3 } from './sprites/birdPixels.js';
 
-// Sun, boat, gardener, skater sprites
-import { sun1, sun2, sun3 } from './sprites/sunPixels.js';
+// Sun, moon, boat, gardener, skater sprites
+import { sun1, sun2, sun3, sunsetHorizon1, sunsetHorizon2, sunsetHorizon3 } from './sprites/sunPixels.js';
+import { moon as moonData } from './sprites/moonPixels.js';
 import { boat as boatData } from './sprites/boatPixels.js';
 import { maleWalk1 as gMW1, maleWalk2 as gMW2, femaleWalk1 as gFW1, femaleWalk2 as gFW2 } from './sprites/gardenerPixels.js';
 import { skate1, skate2 } from './sprites/skaterPixels.js';
@@ -47,6 +48,15 @@ import { parentsWaiting, parentsHugging, parentsPalette } from './sprites/parent
 
 // Light pole sprites
 import { lightPole as lightPoleData, lightPolePalette } from './sprites/lightPolePixels.js';
+
+// Beach sprites
+import { tile as sandTileData } from './sprites/sandPixels.js';
+import { beachBall as beachBallData, beachBallPalette, beachUmbrella as beachUmbrellaData, beachUmbrellaPalette } from './sprites/beachPixels.js';
+import { sandcastle1 as sandcastle1Data, sandcastle2 as sandcastle2Data, sandcastlePalette } from './sprites/sandcastlePixels.js';
+
+// Bonfire and hippie sprites
+import { bonfire1, bonfire2, bonfire3, bonfire4, bonfirePalette } from './sprites/bonfirePixels.js';
+import { hippie1 as hippie1Data, hippie2 as hippie2Data, hippiePalette } from './sprites/hippiePixels.js';
 
 // --- Emi Textures ---
 export const emiIdle = renderSprite(EmiSprites.idle, Palettes.emi);
@@ -170,6 +180,12 @@ export const sunSunsetFrames = [
     renderSprite(sun2, Palettes.sunSunset),
     renderSprite(sun3, Palettes.sunSunset),
 ];
+export const sunsetHorizonFrames = [
+    renderSprite(sunsetHorizon1, Palettes.sunSunset),
+    renderSprite(sunsetHorizon2, Palettes.sunSunset),
+    renderSprite(sunsetHorizon3, Palettes.sunSunset),
+];
+export const moonTex = renderSprite(moonData, Palettes.moon);
 export const sunTexture = sunFrames[0]; // backwards compatibility
 export const boatTexture = renderSprite(boatData, Palettes.environment);
 export const gardenerMaleFrames = [
@@ -226,6 +242,29 @@ export const welcomeSign = renderSprite(welcomeSignBoard, welcomeSignPalette);
 // --- Light Pole Textures ---
 export const lightPoleTex = renderSprite(lightPoleData, lightPolePalette);
 export const lightPoleNightTex = renderSprite(lightPoleData, Palettes.lightPoleNight);
+
+// --- Beach Textures ---
+export const sandTile = renderSprite(sandTileData, Palettes.sand);
+export const sandSunsetTile = renderSprite(sandTileData, Palettes.sandSunset);
+export const sandNightTile = renderSprite(sandTileData, Palettes.sandNight);
+export const beachBallTex = renderSprite(beachBallData, beachBallPalette);
+export const beachUmbrellaTex = renderSprite(beachUmbrellaData, beachUmbrellaPalette);
+export const sandcastle1Tex = renderSprite(sandcastle1Data, sandcastlePalette);
+export const sandcastle2Tex = renderSprite(sandcastle2Data, sandcastlePalette);
+
+// --- Bonfire Textures ---
+export const bonfireFrames = [
+    renderSprite(bonfire1, bonfirePalette),
+    renderSprite(bonfire2, bonfirePalette),
+    renderSprite(bonfire3, bonfirePalette),
+    renderSprite(bonfire4, bonfirePalette),
+];
+
+// --- Hippie Textures ---
+export const hippieFrames = [
+    renderSprite(hippie1Data, hippiePalette),
+    renderSprite(hippie2Data, hippiePalette),
+];
 
 // --- Parents Textures ---
 export const parentsWaitingTex = renderSprite(parentsWaiting, parentsPalette);

@@ -20,6 +20,11 @@ export class MenuScene {
         this.flashCount = 0;
         this.musicStarted = false; // Track if menu music has started
 
+        // Character walk animation at 12fps
+        this.walkFrame = 0;
+        this.walkTimer = 0;
+        this.walkFrameInterval = 1 / 12; // 12fps
+
         // Character animation - looking left/right randomly
         this.emiLookTimer = Math.random() * 2;
         this.emiLookDir = 0; // -1=left, 0=center, 1=right
@@ -47,6 +52,13 @@ export class MenuScene {
             bird.update(dt);
         }
         this.menuBirds = this.menuBirds.filter(b => b.alive);
+
+        // Walk animation (12fps cycle through 6 frames)
+        this.walkTimer += dt;
+        if (this.walkTimer >= this.walkFrameInterval) {
+            this.walkTimer -= this.walkFrameInterval;
+            this.walkFrame = (this.walkFrame + 1) % 6;
+        }
 
         // Animate character looking directions
         this.emiLookTimer += dt;
@@ -138,14 +150,18 @@ export class MenuScene {
         const selectedScale = scale * 1.0;
         const unselectedScale = scale * 0.8;
 
-        // Emi portrait
+        // Get walk frame textures
+        const emiWalkTex = TC.emiWalkFrames[this.walkFrame];
+        const joWalkTex = TC.joWalkFrames[this.walkFrame];
+
+        // Emi character (walk animation)
         const emiScale = this.selectedIndex === 0 ? selectedScale : unselectedScale;
-        const emiW = TC.emiPortrait.width * emiScale;
-        const emiH = TC.emiPortrait.height * emiScale;
+        const emiW = emiWalkTex.width * emiScale;
+        const emiH = emiWalkTex.height * emiScale;
         const emiX = W / 2 - spacing - emiW / 2;
         const emiY = centerY - emiH / 2;
 
-        // Selection indicator (behind selected portrait)
+        // Selection indicator (behind selected character)
         if (this.selectedIndex === 0) {
             ctx.save();
             ctx.globalAlpha = this.blinkAlpha;
@@ -154,26 +170,24 @@ export class MenuScene {
             ctx.restore();
         }
 
-        // Draw Emi portrait (handle flash and look animation)
+        // Draw Emi walk frame (handle flash and look animation)
         const emiAlpha = this._getPortraitAlpha(0);
         ctx.save();
         ctx.globalAlpha = emiAlpha;
-        // Apply look direction offset
         const emiOffsetX = this.emiLookDir * 3;
         if (this.emiLookDir === -1) {
-            // Looking left - flip horizontally
             ctx.translate(emiX + emiW + emiOffsetX, emiY);
             ctx.scale(-1, 1);
-            ctx.drawImage(TC.emiPortrait, 0, 0, emiW, emiH);
+            ctx.drawImage(emiWalkTex, 0, 0, emiW, emiH);
         } else {
-            ctx.drawImage(TC.emiPortrait, emiX + emiOffsetX, emiY, emiW, emiH);
+            ctx.drawImage(emiWalkTex, emiX + emiOffsetX, emiY, emiW, emiH);
         }
         ctx.restore();
 
-        // Jo portrait
+        // Jo character (walk animation)
         const joScale = this.selectedIndex === 1 ? selectedScale : unselectedScale;
-        const joW = TC.joPortrait.width * joScale;
-        const joH = TC.joPortrait.height * joScale;
+        const joW = joWalkTex.width * joScale;
+        const joH = joWalkTex.height * joScale;
         const joX = W / 2 + spacing - joW / 2;
         const joY = centerY - joH / 2;
 
@@ -185,19 +199,17 @@ export class MenuScene {
             ctx.restore();
         }
 
-        // Draw Jo portrait (handle flash and look animation)
+        // Draw Jo walk frame (handle flash and look animation)
         const joAlpha = this._getPortraitAlpha(1);
         ctx.save();
         ctx.globalAlpha = joAlpha;
-        // Apply look direction offset
         const joOffsetX = this.joLookDir * 3;
         if (this.joLookDir === 1) {
-            // Looking right - flip horizontally
             ctx.translate(joX + joW + joOffsetX, joY);
             ctx.scale(-1, 1);
-            ctx.drawImage(TC.joPortrait, 0, 0, joW, joH);
+            ctx.drawImage(joWalkTex, 0, 0, joW, joH);
         } else {
-            ctx.drawImage(TC.joPortrait, joX + joOffsetX, joY, joW, joH);
+            ctx.drawImage(joWalkTex, joX + joOffsetX, joY, joW, joH);
         }
         ctx.restore();
 

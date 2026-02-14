@@ -63,11 +63,50 @@ export const Config = {
     autoShootDuration: 10,    // seconds of auto-fire when pickup collected
     autoShootInterval: 0.4,   // seconds between auto-fire shots
 
+    // Max level
+    maxLevel: 90,
+
     // Ground surface (where player stands)
     get groundSurface() {
         return this.groundY + this.groundHeight / 2;
     }
 };
+
+// City data – each entry marks the first level of a city stretch
+export const CITY_DATA = [
+    { level: 1,  name: 'Montevideo' },
+    { level: 7,  name: 'Ciudad de la Costa' },
+    { level: 13, name: 'REPUBLICA del Pinar' },
+    { level: 19, name: 'Atlantida' },
+    { level: 25, name: 'Jaureguiberry' },
+    { level: 31, name: 'Santa Ana' },
+    { level: 37, name: 'Piriapolis' },
+    { level: 43, name: 'CHIUAUA' },
+    { level: 49, name: 'Punta del Este' },
+    { level: 55, name: 'Jose Ignacio' },
+    { level: 61, name: 'La Paloma' },
+    { level: 67, name: 'Cabo Polonio' },
+    { level: 73, name: 'Punta del Diablo' },
+    { level: 79, name: 'La Coronilla' },
+    { level: 85, name: 'Barra del Chuy' },
+];
+
+/**
+ * Returns true if the given level should use beach terrain.
+ * Levels 5-6 of each 6-level block are beach.
+ * Cabo Polonio (levels 67-72) is ALL beach.
+ */
+export function isBeachLevel(level) {
+    const posInBlock = ((level - 1) % 6) + 1;
+    return posInBlock >= 5 || (level >= 67 && level <= 72);
+}
+
+/**
+ * Returns the CITY_DATA entry whose level matches, or null.
+ */
+export function getCityForLevel(level) {
+    return CITY_DATA.find(c => c.level === level) || null;
+}
 
 /**
  * Returns 'day', 'sunset', or 'night' based on level and real-world time.
