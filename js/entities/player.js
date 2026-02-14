@@ -263,8 +263,8 @@ export class Player {
     _updatePotholeSequence(dt) {
         this.potholeTimer += dt;
 
-        // Total duration: 1.1s (0.33s fall-in + 0.77s eyes)
-        if (this.potholeTimer >= 1.1) {
+        // Total duration: 1.6s (0.33s fall-in + 1.27s eyes)
+        if (this.potholeTimer >= 1.6) {
             this.visible = true;
             this.state = STATES.WALKING;
             this.potholeTimer = 0;

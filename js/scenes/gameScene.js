@@ -540,9 +540,10 @@ export class GameScene {
             if (!aabbOverlap(playerAABB, obstAABB)) continue;
 
             if (obstacle.type === 'tree') {
-                // Tree: only collides when jumping (branch is above standing player)
+                // Tree: only collides when jumping (canopy is above standing player)
                 if (!this.player.isOnGround) {
                     if (this.player.tripAndFall()) {
+                        obstacle.startShake();
                         this.game.music.playHitSound();
                     }
                     break;

@@ -57,7 +57,7 @@ export const Config = {
     // Jogger NPC (from level 6+)
     joggerBaseSpawnInterval: 8.0,   // average seconds between jogger spawns
     joggerSpeed: 200,               // px/s (moves toward left)
-    joggerMinLevel: 6,              // first level joggers appear
+    joggerMinLevel: 3,              // first level joggers appear
 
     // Ammo (auto-shoot power-up)
     initialAmmo: 0,           // No starting ammo (runner mode)

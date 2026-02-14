@@ -10,9 +10,9 @@ const BODY_SIZES = {
     rock:      { w: 14, h: 10 },
     bench:     { w: 22, h: 14 },
     trashCan:  { w: 10, h: 18 },
-    pothole:   { w: 18, h: 6 },
+    pothole:   { w: 18, h: 8 },
     cooler:    { w: 16, h: 12 },
-    tree:      { w: 18, h: 6 },   // only the branch AABB
+    tree:      { w: 18, h: 20 },  // canopy AABB (wide and tall)
 };
 
 // Texture lookup (default textures)
@@ -76,21 +76,26 @@ export class Obstacle {
             this.eyesOpen = true;
         }
 
+        // --- Tree: shake + falling leaves state ---
+        if (type === 'tree') {
+            this.shaking = false;
+            this.shakeTimer = 0;
+            this.shakeDuration = 0.6;
+            this.leaves = []; // falling leaf particles
+        }
+
         // --- Y positioning ---
         const spriteH = this.texture.height * scale;
 
         if (type === 'pothole') {
-            // Pothole is embedded in ground (slightly below surface)
-            this.y = groundSurface + 6;
+            // Pothole is embedded deeper in ground
+            this.y = groundSurface + 12;
         } else if (type === 'tree') {
-            // Tree sprite bottom on ground, but AABB at branch height
+            // Tree sprite bottom on ground, AABB at canopy
             this.y = groundSurface + spriteH / 2;
-            // Branch Y: the branch is near the top of the tree
-            // Tree is 40px tall * 3 scale = 120px. Ground surface at 180.
-            // Tree top (game coords) = groundSurface + 120 = 300
-            // Branch should be just above standing player top (219)
-            // Branch center at groundSurface + 84 = 264
-            this.branchY = groundSurface + 84;
+            // Tree is 50px * 3 = 150px. Canopy = rows 0-20 = 21*3 = 63px
+            // Canopy center Y (game coords) = groundSurface + 150 - 31.5 = groundSurface + 118.5
+            this.canopyY = groundSurface + spriteH - (21 * scale) / 2;
         } else {
             // Ground obstacles: center based on sprite height
             this.y = groundSurface + spriteH / 2;
@@ -161,6 +166,31 @@ export class Obstacle {
     }
 
     /**
+     * Start tree shake animation + spawn falling leaves (called on collision)
+     */
+    startShake() {
+        if (this.shaking) return;
+        this.shaking = true;
+        this.shakeTimer = 0;
+        // Spawn 5-8 leaves from canopy area
+        const scale = Config.pixelScale;
+        const numLeaves = 5 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < numLeaves; i++) {
+            this.leaves.push({
+                x: this.x + (Math.random() - 0.5) * 50,
+                screenY: 0, // will be set relative to canopy top
+                vy: 20 + Math.random() * 40,     // fall speed (screen pixels/s)
+                vx: (Math.random() - 0.5) * 30,  // horizontal drift
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 4,
+                alpha: 1.0,
+                startDelay: Math.random() * 0.3,  // stagger leaf drops
+                grounded: false,
+            });
+        }
+    }
+
+    /**
      * Knock over the trash can (called on player collision)
      */
     knockOver() {
@@ -190,7 +220,7 @@ export class Obstacle {
             }
         }
 
-        // Pothole fall animation
+        // Pothole fall animation (0.33s fall-in + 1.27s eyes = 1.6s total)
         if (this.type === 'pothole' && this.activeFallAnim) {
             this.fallAnimTimer += dt;
             if (this.fallAnimPhase === 'fallIn' && this.fallAnimTimer >= 0.33) {
@@ -205,9 +235,48 @@ export class Obstacle {
                     this.eyeBlinkTimer -= 0.25;
                     this.eyesOpen = !this.eyesOpen;
                 }
-                if (this.fallAnimTimer >= 0.77) {
+                if (this.fallAnimTimer >= 1.27) {
                     this.activeFallAnim = false;
                     this.fallAnimPhase = null;
+                }
+            }
+        }
+
+        // Tree shake animation + falling leaves
+        if (this.type === 'tree' && this.shaking) {
+            this.shakeTimer += dt;
+            if (this.shakeTimer >= this.shakeDuration) {
+                this.shaking = false;
+            }
+        }
+        if (this.type === 'tree' && this.leaves.length > 0) {
+            const sidewalkH = 16 * Config.pixelScale;
+            const groundScreenY = Config.sceneHeight - sidewalkH;
+            for (let i = this.leaves.length - 1; i >= 0; i--) {
+                const leaf = this.leaves[i];
+                if (leaf.startDelay > 0) {
+                    leaf.startDelay -= dt;
+                    continue;
+                }
+                if (!leaf.grounded) {
+                    leaf.screenY += leaf.vy * dt;
+                    leaf.x += leaf.vx * dt;
+                    leaf.rotation += leaf.rotSpeed * dt;
+                    // Check if leaf hit ground level
+                    // Leaf starts from canopy top area (~row 0 of sprite)
+                    const spriteH = this.texture.height * Config.pixelScale;
+                    const treeScreenTop = Config.sceneHeight - sidewalkH - spriteH;
+                    if (treeScreenTop + leaf.screenY >= groundScreenY - 4) {
+                        leaf.grounded = true;
+                        leaf.screenY = groundScreenY - treeScreenTop - 4;
+                        leaf.alpha = 0.8;
+                    }
+                } else {
+                    // Grounded leaves fade slowly
+                    leaf.alpha -= dt * 0.15;
+                    if (leaf.alpha <= 0) {
+                        this.leaves.splice(i, 1);
+                    }
                 }
             }
         }
@@ -225,11 +294,11 @@ export class Obstacle {
             return { x: this.x, y: this.y, hw: 0, hh: 0 };
         }
 
-        // Tree: AABB only at branch height
+        // Tree: AABB only at canopy
         if (this.type === 'tree') {
             return {
                 x: this.x,
-                y: this.branchY,
+                y: this.canopyY,
                 hw: (size.w * scale) / 2,
                 hh: (size.h * scale) / 2,
             };
@@ -272,18 +341,49 @@ export class Obstacle {
 
         const w = texture.width * scale;
         const h = texture.height * scale;
-        const screenX = this.x - cameraX - w / 2;
+        let screenX = this.x - cameraX - w / 2;
 
         // Position sprite so bottom is on top of sidewalk
         const sidewalkH = 16 * scale; // sidewalk tile height = 48px
         let screenY = Config.sceneHeight - sidewalkH - h;
 
-        // Pothole: sink slightly into ground
+        // Pothole: sink deeper into ground
         if (this.type === 'pothole') {
-            screenY = Config.sceneHeight - sidewalkH - h + 6;
+            screenY = Config.sceneHeight - sidewalkH - h + 12;
         }
 
         ctx.imageSmoothingEnabled = false;
+
+        // Tree: shake effect (oscillate X)
+        if (this.type === 'tree' && this.shaking) {
+            const progress = this.shakeTimer / this.shakeDuration;
+            const shakeAmount = 4 * (1 - progress) * Math.sin(this.shakeTimer * 30);
+            screenX += shakeAmount;
+        }
+
         ctx.drawImage(texture, screenX, screenY, w, h);
+
+        // Tree: draw falling leaves
+        if (this.type === 'tree' && this.leaves.length > 0) {
+            const leafTex = TC.leafTex;
+            if (leafTex) {
+                const leafW = leafTex.width * scale;
+                const leafH = leafTex.height * scale;
+                const spriteH = this.texture.height * scale;
+                const treeScreenTop = Config.sceneHeight - sidewalkH - spriteH;
+
+                for (const leaf of this.leaves) {
+                    if (leaf.startDelay > 0) continue;
+                    const lx = leaf.x - cameraX - leafW / 2;
+                    const ly = treeScreenTop + leaf.screenY;
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, leaf.alpha);
+                    ctx.translate(lx + leafW / 2, ly + leafH / 2);
+                    ctx.rotate(leaf.rotation);
+                    ctx.drawImage(leafTex, -leafW / 2, -leafH / 2, leafW, leafH);
+                    ctx.restore();
+                }
+            }
+        }
     }
 }
