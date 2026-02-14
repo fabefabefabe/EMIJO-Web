@@ -1,13 +1,11 @@
-// Player Entity - state machine, custom physics, animations, health, invincibility
+// Player Entity - auto-runner with jump, trip/fall, health, invincibility
 import { Config } from '../config.js';
 import { getCharacterTextures } from '../textureCache.js';
 import { drawSprite } from '../renderer.js';
 
 const STATES = {
-    IDLE: 'idle',
     WALKING: 'walking',
     JUMPING: 'jumping',
-    CROUCHING: 'crouching',
     TRIPPING: 'tripping',
     LYING: 'lying',
     GETTING_UP: 'gettingUp',
@@ -24,8 +22,8 @@ export class Player {
         this.vx = 0;
         this.vy = 0;
 
-        // State machine
-        this.state = STATES.IDLE;
+        // State machine (auto-runner: always walking forward)
+        this.state = STATES.WALKING;
         this.facingRight = true;
         this.isOnGround = false;
 
@@ -51,12 +49,23 @@ export class Player {
         // Visibility (for family hug animation)
         this.visible = true;
 
-        // Speed multiplier based on level (increases from level 6+)
-        this.levelSpeedMultiplier = level >= 6 ? 1.0 + (level - 5) * 0.05 : 1.0;
+        // Jump requested by tap/click (consumed on next frame)
+        this.jumpRequested = false;
+
+        // Progressive speed: level 1 starts slow, increases each level
+        // Level 1: 0.55x, Level 6: 1.00x, Level 10: 1.36x, Level 15: 1.81x
+        this.levelSpeedMultiplier = 0.55 + (level - 1) * 0.09;
     }
 
     get energyFraction() {
         return this.energy / Config.maxEnergy;
+    }
+
+    /**
+     * Called by gameScene.onClick to request a jump (tap/click).
+     */
+    requestJump() {
+        this.jumpRequested = true;
     }
 
     /**
@@ -66,9 +75,7 @@ export class Player {
     getAABB() {
         const scale = Config.pixelScale;
         const hw = (10 * scale) / 2;
-        const hh = this.state === STATES.CROUCHING
-            ? (16 * scale) / 2
-            : (26 * scale) / 2;
+        const hh = (26 * scale) / 2;
         return { x: this.x, y: this.y, hw, hh };
     }
 
@@ -83,7 +90,7 @@ export class Player {
         if (this.state === STATES.TRIPPING || this.state === STATES.LYING || this.state === STATES.GETTING_UP) {
             this._updateTripSequence(dt);
         } else {
-            // Handle input-based state transitions
+            // Auto-run + jump input
             this._handleInput(input, dt);
         }
 
@@ -98,65 +105,26 @@ export class Player {
     }
 
     _handleInput(input, dt) {
-        switch (this.state) {
-            case STATES.IDLE:
-                if (input.isJumping && this.isOnGround) {
-                    this._enterJump();
-                } else if (input.isCrouching) {
-                    this._enterCrouch();
-                } else if (input.hasMovement) {
-                    this._enterWalk(input.horizontalDirection);
-                }
-                break;
+        // Auto-runner: always move forward
+        const runSpeed = Config.walkSpeed * this.levelSpeedMultiplier;
 
-            case STATES.WALKING:
-                if (input.isJumping && this.isOnGround) {
-                    this._enterJump();
-                } else if (input.isCrouching) {
-                    this._enterCrouch();
-                } else if (!input.hasMovement) {
-                    this._enterIdle();
-                } else {
-                    this._applyMovement(input.horizontalDirection);
-                    this._advanceWalkAnim(dt);
-                }
-                break;
+        if (this.state === STATES.WALKING) {
+            this.vx = runSpeed;
+            this.facingRight = true;
+            this._advanceWalkAnim(dt);
 
-            case STATES.JUMPING:
-                // Air control — full speed + preserve momentum
-                if (input.hasMovement) {
-                    this._applyMovement(input.horizontalDirection, 1.0);
-                }
-                // If no input, keep existing vx (momentum preserved)
-                break;
-
-            case STATES.CROUCHING:
-                if (!input.isCrouching) {
-                    this._enterIdle();
-                } else if (input.hasMovement) {
-                    this._applyMovement(input.horizontalDirection, 0.5);
-                    this._advanceWalkAnim(dt);
-                } else {
-                    this.vx = 0;
-                }
-                break;
+            // Jump on input OR tap request
+            if ((input.isJumping || this.jumpRequested) && this.isOnGround) {
+                this.jumpRequested = false;
+                this._enterJump();
+            } else {
+                this.jumpRequested = false; // consume even if can't jump
+            }
+        } else if (this.state === STATES.JUMPING) {
+            // Maintain forward speed in air
+            this.vx = runSpeed;
+            this.jumpRequested = false;
         }
-    }
-
-    _enterIdle() {
-        this.state = STATES.IDLE;
-        this.vx = 0;
-        this.walkFrame = 0;
-        this.walkTimer = 0;
-    }
-
-    _enterWalk(direction) {
-        if (this.state !== STATES.WALKING) {
-            this.state = STATES.WALKING;
-            this.walkFrame = 0;
-            this.walkTimer = 0;
-        }
-        this._applyMovement(direction);
     }
 
     _enterJump() {
@@ -164,22 +132,6 @@ export class Player {
         this.state = STATES.JUMPING;
         this.isOnGround = false;
         this.vy = Config.jumpImpulse;
-    }
-
-    _enterCrouch() {
-        this.state = STATES.CROUCHING;
-        // Don't zero vx — allow crouch-walking
-    }
-
-    _applyMovement(direction, speedMultiplier = 1.0) {
-        // Puede ir hacia atrás pero más lento (30% de velocidad)
-        if (direction < 0) {
-            this.vx = direction * Config.walkSpeed * 0.3 * this.levelSpeedMultiplier;
-            this.facingRight = false;
-        } else {
-            this.vx = direction * Config.walkSpeed * speedMultiplier * this.levelSpeedMultiplier;
-            if (direction > 0) this.facingRight = true;
-        }
     }
 
     _advanceWalkAnim(dt) {
@@ -205,7 +157,8 @@ export class Player {
             if (!this.isOnGround) {
                 this.isOnGround = true;
                 if (this.state === STATES.JUMPING) {
-                    this._enterIdle();
+                    // Auto-runner: land → resume walking (not idle)
+                    this.state = STATES.WALKING;
                 }
             }
         }
@@ -260,7 +213,8 @@ export class Player {
             this.tripPhase = 'getUp';
             this.tripTimer = 0;
         } else if (this.tripPhase === 'getUp' && this.tripTimer >= 0.15) {
-            this.state = STATES.IDLE;
+            // Auto-runner: resume walking after recovery (not idle)
+            this.state = STATES.WALKING;
             this.tripPhase = '';
             this.tripTimer = 0;
             // Activate invincibility
@@ -301,8 +255,6 @@ export class Player {
                 return this.textures.walk[this.walkFrame];
             case STATES.JUMPING:
                 return this.textures.jump;
-            case STATES.CROUCHING:
-                return this.textures.crouch;
             case STATES.TRIPPING:
                 return this.textures.fall;
             case STATES.LYING:
@@ -354,7 +306,7 @@ export class Player {
         this.y = Config.groundSurface; // start on ground
         this.vx = 0;
         this.vy = 0;
-        this.state = STATES.IDLE;
+        this.state = STATES.WALKING;
         this.facingRight = true;
         this.isOnGround = false;
         this.walkFrame = 0;
@@ -368,5 +320,6 @@ export class Player {
         this.tripTimer = 0;
         this.tripPhase = '';
         this.fallMomentum = 0;
+        this.jumpRequested = false;
     }
 }

@@ -9,7 +9,6 @@ import { Camera } from '../systems/camera.js';
 import { ParallaxSystem } from '../systems/parallax.js';
 import { generateObstacles } from '../systems/obstacleSpawner.js';
 import { aabbOverlap } from '../systems/collision.js';
-import { Skater } from '../entities/skater.js';
 import { HeartPickup } from '../entities/heartPickup.js';
 import { Projectile } from '../entities/projectile.js';
 import { AmmoPickup } from '../entities/ammoPickup.js';
@@ -84,11 +83,6 @@ export class GameScene {
         // Metros recorridos (en lugar de timer)
         this.metersWalked = 0;
 
-        // Anti-idle skater
-        this.idleTimer = 0;
-        this.lastPlayerX = this.player.x;
-        this.skater = null;
-
         // Game over text blink
         this.goBlinkTimer = 0;
         this.goBlinkAlpha = 1.0;
@@ -100,17 +94,13 @@ export class GameScene {
         this.heartPickups = [];
         this._spawnFixedHearts();
 
-        // Projectiles (superpowers)
+        // Projectiles (auto-shoot power-up)
         this.projectiles = [];
-        this.canShoot = true; // Cooldown for shooting
+        this.autoShootActive = false;
+        this.autoShootTimer = 0;     // countdown from 10→0
+        this.autoShootCooldown = 0;  // interval between shots
 
-        // Ammo system - persists across levels
-        if (this.game.state.ammo === undefined) {
-            this.game.state.ammo = Config.initialAmmo;
-        }
-        this.ammo = this.game.state.ammo;
-
-        // Ammo pickups
+        // Ammo pickups (collecting activates auto-shoot)
         this.ammoPickups = [];
         this._spawnFixedAmmo();
 
@@ -174,7 +164,7 @@ export class GameScene {
                 line2: TC.renderText('DE URUGUAY!'),
                 line3: TC.renderText('LLEGA AL FINAL Y'),
                 line4: TC.renderText('REENCUENTRATE CON TUS PADRES'),
-                walkText: TC.renderText('CAMINA HACIA ADELANTE'),
+                walkText: TC.renderText('TOCA PARA SALTAR'),
                 jumpText: TC.renderText('SALTA EL OBSTACULO!'),
             };
         }
@@ -239,7 +229,6 @@ export class GameScene {
             if (input.consumeKey('KeyS')) {
                 this.game.state.totalMeters = 0;
                 this.game.state.currentLevel = undefined;
-                this.game.state.ammo = undefined;
                 this.game.music.playTrack('menu');
                 this.game.setScene('menu');
             }
@@ -333,7 +322,6 @@ export class GameScene {
                 } else {
                     this.game.state.totalMeters = 0;
                     this.game.state.currentLevel = undefined;
-                    this.game.state.ammo = undefined;
                     this.game.music.playTrack('menu');
                     this.game.setScene('hallOfFame');
                 }
@@ -346,9 +334,17 @@ export class GameScene {
             this.game.toggleMusic();
         }
 
-        // Superpower: ENTER key or touch shoot button fires projectile
-        if ((input.consumeKey('Enter') || input.consumeTouch('shoot')) && this.canShoot) {
-            this._fireProjectile();
+        // Auto-shoot power-up: fire projectiles automatically when active
+        if (this.autoShootActive) {
+            this.autoShootTimer -= dt;
+            this.autoShootCooldown -= dt;
+            if (this.autoShootCooldown <= 0) {
+                this._fireProjectile();
+                this.autoShootCooldown = Config.autoShootInterval;
+            }
+            if (this.autoShootTimer <= 0) {
+                this.autoShootActive = false;
+            }
         }
 
         // Dog animation (tail wag / head tilt)
@@ -486,16 +482,15 @@ export class GameScene {
         }
         this.ammoPickups = this.ammoPickups.filter(a => a.alive);
 
-        // Collision: player vs ammo pickups
+        // Collision: player vs ammo pickups → activate auto-shoot
         const playerAABBForAmmo = this.player.getAABB();
         for (const ammo of this.ammoPickups) {
             if (aabbOverlap(playerAABBForAmmo, ammo.getAABB())) {
-                if (this.ammo < Config.maxAmmo) {
-                    if (ammo.collect()) {
-                        this.ammo = Math.min(Config.maxAmmo, this.ammo + 1);
-                        this.game.state.ammo = this.ammo; // Persist
-                        this.game.music.playPickupSound();
-                    }
+                if (ammo.collect()) {
+                    this.autoShootActive = true;
+                    this.autoShootTimer = Config.autoShootDuration; // reset to 10s
+                    this.autoShootCooldown = 0; // fire immediately
+                    this.game.music.playPickupSound();
                 }
             }
         }
@@ -510,32 +505,6 @@ export class GameScene {
         this.ammoPickups = this.ammoPickups.filter(a => a.alive && a.x > cullX);
         this.dogMarkers = this.dogMarkers.filter(d => d.x > cullX);
         this.lightPoles = this.lightPoles.filter(p => p.x > cullX);
-
-        // Anti-idle skater detection
-        if (Math.abs(this.player.x - this.lastPlayerX) < 1) {
-            this.idleTimer += dt;
-            if (this.idleTimer >= Config.idleTimeForSkater && !this.skater) {
-                this._spawnSkater();
-                this.idleTimer = 0;
-            }
-        } else {
-            this.idleTimer = 0;
-        }
-        this.lastPlayerX = this.player.x;
-
-        // Update skater
-        if (this.skater) {
-            this.skater.update(dt);
-            const playerAABB = this.player.getAABB();
-            if (aabbOverlap(playerAABB, this.skater.getAABB())) {
-                if (this.player.tripAndFall()) {
-                    this.game.music.playHitSound();
-                }
-            }
-            if (!this.skater.alive) {
-                this.skater = null;
-            }
-        }
 
         // Collision: player vs obstacles
         const playerAABB = this.player.getAABB();
@@ -615,11 +584,6 @@ export class GameScene {
         // Draw ammo pickups
         for (const ammo of this.ammoPickups) {
             ammo.draw(ctx, camX);
-        }
-
-        // Draw skater
-        if (this.skater) {
-            this.skater.draw(ctx, camX);
         }
 
         // Draw projectiles
@@ -704,32 +668,46 @@ export class GameScene {
         // Store bounds for click detection
         this._musicBounds = { x: iconX, y: iconY, w: iconW, h: iconH };
 
-        // Draw ammo counter (below music icon, top-right)
-        const charType = this.game.state.selectedCharacter || 'emi';
-        const ammoFrames = charType === 'jo' ? TC.hockeyStickFrames : TC.soccerBallFrames;
-        const ammoIcon = ammoFrames[0];
-        const ammoIconScale = scale * 0.8;
-        const ammoIconW = ammoIcon.width * ammoIconScale;
-        const ammoIconH = ammoIcon.height * ammoIconScale;
-        const ammoIconX = W - margin - ammoIconW - 5;
-        const ammoIconY = iconY + iconH + 10;
+        // Draw auto-shoot countdown (below music icon, top-right) — only when active
+        if (this.autoShootActive) {
+            const charType = this.game.state.selectedCharacter || 'emi';
+            const ammoFrames = charType === 'jo' ? TC.hockeyStickFrames : TC.soccerBallFrames;
+            const ammoIcon = ammoFrames[0];
+            const ammoIconScale = scale * 0.8;
+            const ammoIconW = ammoIcon.width * ammoIconScale;
+            const ammoIconH = ammoIcon.height * ammoIconScale;
+            const ammoIconX = W - margin - ammoIconW;
+            const ammoIconY = iconY + iconH + 10;
 
-        // Draw ammo icons (up to 3 mini icons, then just show number)
-        const maxDisplayIcons = 3;
-        const displayCount = Math.min(this.ammo, maxDisplayIcons);
-        for (let i = 0; i < displayCount; i++) {
-            ctx.drawImage(ammoIcon, ammoIconX - i * (ammoIconW * 0.6), ammoIconY, ammoIconW, ammoIconH);
+            // Weapon icon
+            ctx.drawImage(ammoIcon, ammoIconX, ammoIconY, ammoIconW, ammoIconH);
+
+            // Countdown text: "8S"
+            const secs = Math.ceil(this.autoShootTimer);
+            const countText = TC.renderText(secs + 'S');
+            const countScale = scale * 0.6;
+            const countW = countText.width * countScale;
+            const countH = countText.height * countScale;
+            const countX = ammoIconX - countW - 6;
+            const countY = ammoIconY + (ammoIconH - countH) / 2;
+            ctx.drawImage(countText, countX, countY, countW, countH);
+
+            // Progress bar below icon
+            const barW = ammoIconW + countW + 6;
+            const barH = 4;
+            const barX = countX;
+            const barY = ammoIconY + ammoIconH + 4;
+            const progress = this.autoShootTimer / Config.autoShootDuration;
+
+            // Bar background (dark)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(barX, barY, barW, barH);
+            // Bar fill (gold → red as time runs out)
+            const r = Math.round(255);
+            const g = Math.round(215 * progress);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(barX, barY, barW * progress, barH);
         }
-
-        // Draw ammo count number
-        const ammoText = TC.renderText('X' + this.ammo);
-        const ammoTextScale = scale * 0.5;
-        const ammoTextW = ammoText.width * ammoTextScale;
-        const ammoTextH = ammoText.height * ammoTextScale;
-        const ammoTextX = ammoIconX - maxDisplayIcons * (ammoIconW * 0.6) - ammoTextW - 5;
-        const ammoTextY = ammoIconY + (ammoIconH - ammoTextH) / 2;
-
-        ctx.drawImage(ammoText, ammoTextX, ammoTextY, ammoTextW, ammoTextH);
     }
 
     _drawGameOver(ctx) {
@@ -809,7 +787,7 @@ export class GameScene {
                 ctx.drawImage(tex, (W - tw) / 2, startY + i * lineSpacing, tw, th);
             }
 
-            // Right arrow with glow (floating, to the right of player)
+            // Up arrow with glow (floating, center of screen)
             const arrowPulse = 0.7 + Math.sin(tut.timer * 4) * 0.3;
             ctx.globalAlpha = baseAlpha * arrowPulse;
             const arrowX = W * 0.5;
@@ -820,25 +798,25 @@ export class GameScene {
             ctx.shadowBlur = 15;
             ctx.fillStyle = '#ffffff';
 
-            // Arrow triangle pointing right
+            // Arrow triangle pointing up
             ctx.beginPath();
-            ctx.moveTo(arrowX + 30, arrowY);
-            ctx.lineTo(arrowX - 10, arrowY - 18);
-            ctx.lineTo(arrowX - 10, arrowY + 18);
+            ctx.moveTo(arrowX, arrowY - 20);
+            ctx.lineTo(arrowX - 18, arrowY + 10);
+            ctx.lineTo(arrowX + 18, arrowY + 10);
             ctx.closePath();
             ctx.fill();
 
-            // Arrow tail (rectangle)
-            ctx.fillRect(arrowX - 30, arrowY - 8, 24, 16);
+            // Arrow stem (vertical)
+            ctx.fillRect(arrowX - 6, arrowY + 8, 12, 20);
 
             ctx.shadowBlur = 0;
 
-            // "CAMINA HACIA ADELANTE" text below arrow
+            // "TOCA PARA SALTAR" text below arrow
             ctx.globalAlpha = baseAlpha * 0.9;
             const walkScale = scale * 0.6;
             const walkW = tut.walkText.width * walkScale;
             const walkH = tut.walkText.height * walkScale;
-            ctx.drawImage(tut.walkText, (W - walkW) / 2, arrowY + 30, walkW, walkH);
+            ctx.drawImage(tut.walkText, (W - walkW) / 2, arrowY + 40, walkW, walkH);
 
         } else if (tut.phase === 1) {
             // --- Phase 1: Jump hint above first obstacle ---
@@ -1094,20 +1072,7 @@ export class GameScene {
         this.game.music.playTrack('gameover');
     }
 
-    _spawnSkater() {
-        // Skater comes from behind the player
-        const startX = this.player.x - Config.sceneWidth;
-        this.skater = new Skater(startX, 1);
-    }
-
     _fireProjectile() {
-        // Check if we have ammo
-        if (this.ammo <= 0) return;
-
-        // Consume ammo
-        this.ammo--;
-        this.game.state.ammo = this.ammo; // Persist
-
         // Determine projectile type based on character
         const charType = this.game.state.selectedCharacter || 'emi';
         const projType = charType === 'jo' ? 'hockey' : 'soccer';
@@ -1126,12 +1091,6 @@ export class GameScene {
         } else {
             this.game.music.playShootSound();
         }
-
-        // Cooldown
-        this.canShoot = false;
-        setTimeout(() => {
-            this.canShoot = true;
-        }, 500); // 0.5 second cooldown
     }
 
     onClick(x, y) {
@@ -1139,6 +1098,10 @@ export class GameScene {
         if (this._musicBounds && this._hitTest(x, y, this._musicBounds)) {
             this.game.toggleMusic();
             return;
+        }
+        // Tap to jump (auto-runner mode)
+        if (!this.isLevelComplete && !this.isGameOver && !this.isPaused) {
+            this.player.requestJump();
         }
     }
 

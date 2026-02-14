@@ -54,10 +54,12 @@ export const Config = {
     // Anti-idle skater
     idleTimeForSkater: 15,
 
-    // Ammo (superpowers)
-    initialAmmo: 3,           // Start with 3 shots
+    // Ammo (auto-shoot power-up)
+    initialAmmo: 0,           // No starting ammo (runner mode)
     maxAmmo: 10,              // Max ammo can hold
     ammoSpawnIntervalMeters: 200, // Spawn ammo every 200m
+    autoShootDuration: 10,    // seconds of auto-fire when pickup collected
+    autoShootInterval: 0.4,   // seconds between auto-fire shots
 
     // Ground surface (where player stands)
     get groundSurface() {

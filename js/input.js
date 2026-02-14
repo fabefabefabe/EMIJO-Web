@@ -4,11 +4,7 @@ export class InputManager {
     constructor() {
         this.keys = new Set();
         this.touchState = {
-            left: false,
-            right: false,
             jump: false,
-            crouch: false,
-            shoot: false,
         };
 
         this._setupKeyboard();
@@ -36,37 +32,11 @@ export class InputManager {
             el.addEventListener('touchend', (e) => { e.preventDefault(); this.touchState[prop] = false; });
             el.addEventListener('touchcancel', (e) => { e.preventDefault(); this.touchState[prop] = false; });
         };
-        bind('touchLeft', 'left');
-        bind('touchRight', 'right');
         bind('touchJump', 'jump');
-        bind('touchCrouch', 'crouch');
-        bind('touchShoot', 'shoot');
-    }
-
-    get isMovingLeft() {
-        return this.keys.has('ArrowLeft') || this.touchState.left;
-    }
-
-    get isMovingRight() {
-        return this.keys.has('ArrowRight') || this.touchState.right;
     }
 
     get isJumping() {
         return this.keys.has('ArrowUp') || this.keys.has('Space') || this.touchState.jump;
-    }
-
-    get isCrouching() {
-        return this.keys.has('ArrowDown') || this.touchState.crouch;
-    }
-
-    get horizontalDirection() {
-        if (this.isMovingLeft && !this.isMovingRight) return -1;
-        if (this.isMovingRight && !this.isMovingLeft) return 1;
-        return 0;
-    }
-
-    get hasMovement() {
-        return this.isMovingLeft || this.isMovingRight;
     }
 
     // For menu navigation

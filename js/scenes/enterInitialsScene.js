@@ -233,7 +233,6 @@ export class EnterInitialsScene {
         HallOfFame.addScore(initials, this.level, this.totalMeters);
         this.game.state.totalMeters = 0;
         this.game.state.currentLevel = undefined;
-        this.game.state.ammo = undefined;
         setTimeout(() => {
             this.game.music.playTrack('menu');
             this.game.setScene('hallOfFame');
