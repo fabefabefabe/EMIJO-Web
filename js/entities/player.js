@@ -14,7 +14,7 @@ const STATES = {
 };
 
 export class Player {
-    constructor(characterType) {
+    constructor(characterType, level = 1) {
         this.characterType = characterType;
         this.textures = getCharacterTextures(characterType);
 
@@ -46,6 +46,13 @@ export class Player {
         // Trip animation
         this.tripTimer = 0;
         this.tripPhase = ''; // 'fall' or 'getUp'
+        this.fallMomentum = 0; // Momentum when falling (inercia)
+
+        // Visibility (for family hug animation)
+        this.visible = true;
+
+        // Speed multiplier based on level (increases from level 6+)
+        this.levelSpeedMultiplier = level >= 6 ? 1.0 + (level - 5) * 0.05 : 1.0;
     }
 
     get energyFraction() {
@@ -68,7 +75,7 @@ export class Player {
     /**
      * Main update - called every frame.
      */
-    update(dt, input) {
+    update(dt, input, cameraX = 0) {
         // Update invincibility
         this._updateInvincibility(dt);
 
@@ -86,8 +93,8 @@ export class Player {
         // Ground check
         this._checkGround();
 
-        // Clamp to level bounds
-        this.x = Math.max(60, Math.min(Config.levelWidth - 60, this.x)); // scaled 3x
+        // Clamp: can't go behind camera left edge, no right limit
+        this.x = Math.max(cameraX + 30, this.x);
     }
 
     _handleInput(input, dt) {
@@ -165,9 +172,14 @@ export class Player {
     }
 
     _applyMovement(direction, speedMultiplier = 1.0) {
-        this.vx = direction * Config.walkSpeed * speedMultiplier;
-        if (direction > 0) this.facingRight = true;
-        else if (direction < 0) this.facingRight = false;
+        // Puede ir hacia atrás pero más lento (30% de velocidad)
+        if (direction < 0) {
+            this.vx = direction * Config.walkSpeed * 0.3 * this.levelSpeedMultiplier;
+            this.facingRight = false;
+        } else {
+            this.vx = direction * Config.walkSpeed * speedMultiplier * this.levelSpeedMultiplier;
+            if (direction > 0) this.facingRight = true;
+        }
     }
 
     _advanceWalkAnim(dt) {
@@ -204,10 +216,13 @@ export class Player {
      * @returns {boolean} true if player actually fell, false if blocked
      */
     tripAndFall() {
-        if (this.state === STATES.TRIPPING || this.state === STATES.GETTING_UP) return false;
+        if (this.state === STATES.TRIPPING || this.state === STATES.LYING || this.state === STATES.GETTING_UP) return false;
         if (this.isInvincible) return false;
 
         this.state = STATES.TRIPPING;
+
+        // Save momentum for falling inertia (slide in direction of movement)
+        this.fallMomentum = this.vx * 0.5;
         this.vx = 0;
         this.tripTimer = 0;
         this.tripPhase = 'fall';
@@ -224,11 +239,22 @@ export class Player {
     _updateTripSequence(dt) {
         this.tripTimer += dt;
 
+        // Apply falling momentum (inertia) during fall phase
+        if (this.tripPhase === 'fall' && this.fallMomentum) {
+            this.x += this.fallMomentum * dt;
+            this.fallMomentum *= 0.85; // Decay
+            // Stop if very small
+            if (Math.abs(this.fallMomentum) < 1) {
+                this.fallMomentum = 0;
+            }
+        }
+
         // Faster animation: fall (0.15s) → lying (0.25s) → getUp (0.15s)
         if (this.tripPhase === 'fall' && this.tripTimer >= 0.15) {
             this.state = STATES.LYING;
             this.tripPhase = 'lying';
             this.tripTimer = 0;
+            this.fallMomentum = 0; // Stop sliding when lying
         } else if (this.tripPhase === 'lying' && this.tripTimer >= 0.25) {
             this.state = STATES.GETTING_UP;
             this.tripPhase = 'getUp';
@@ -292,6 +318,7 @@ export class Player {
      * Draws the player on the canvas.
      */
     draw(ctx, cameraX) {
+        if (!this.visible) return;
         const texture = this.getCurrentTexture();
         const scale = Config.pixelScale;
         const screenX = this.x - cameraX;
@@ -340,5 +367,6 @@ export class Player {
         this.alpha = 1.0;
         this.tripTimer = 0;
         this.tripPhase = '';
+        this.fallMomentum = 0;
     }
 }

@@ -1,6 +1,6 @@
 // Parallax Scrolling System - background layers with tile wrapping
 // Layers: sky, sun, boats, sea, gardeners, bushes, sidewalk
-import { Config } from '../config.js';
+import { Config, getTimeOfDay } from '../config.js';
 import * as TC from '../textureCache.js';
 import { Gardener } from '../entities/gardener.js';
 
@@ -17,7 +17,10 @@ import { Gardener } from '../entities/gardener.js';
  */
 
 export class ParallaxSystem {
-    constructor() {
+    constructor(level = 1) {
+        // Time of day: 'day', 'sunset', or 'night'
+        this.timeOfDay = getTimeOfDay(level);
+
         // Sea animation
         this.seaAnimTimer = 0;
         this.seaFrame = 0;
@@ -26,12 +29,14 @@ export class ParallaxSystem {
         this.sunAnimTimer = 0;
         this.sunFrame = 0;
 
-        // Boats on the horizon (random X positions across level)
+        // Boats on the horizon (random X positions across visible area)
+        // Con scrollFactor 0.10, necesitamos posiciones world-space distribuidas
         this.boats = [];
-        const boatCount = 5;
+        const boatCount = 8; // Más barcos para mejor cobertura
+        const boatSpread = Config.levelWidth * 0.15; // Rango random más amplio
         for (let i = 0; i < boatCount; i++) {
             this.boats.push({
-                x: 200 + (Config.levelWidth / boatCount) * i + Math.random() * 300,
+                x: Math.random() * Config.levelWidth * 1.5, // Distribuir en rango amplio
             });
         }
 
@@ -42,6 +47,19 @@ export class ParallaxSystem {
             const x = 200 + (Config.levelWidth / gardenerCount) * i + Math.random() * 100;
             const isFemale = i % 2 === 1;
             this.gardeners.push(new Gardener(x, isFemale));
+        }
+
+        // Flores aleatorias sobre los arbustos - más cantidad y variedad
+        this.flowers = [];
+        const flowerColors = ['red', 'yellow', 'pink', 'white', 'purple', 'orange'];
+        const flowerCount = 150; // Increased from 50 to 150
+        for (let i = 0; i < flowerCount; i++) {
+            this.flowers.push({
+                x: Math.random() * Config.levelWidth,
+                color: flowerColors[Math.floor(Math.random() * flowerColors.length)],
+                offsetY: Math.random() * 25, // Increased variation (was 15)
+                scale: 0.8 + Math.random() * 0.4, // Variable size 0.8x to 1.2x
+            });
         }
     }
 
@@ -82,32 +100,63 @@ export class ParallaxSystem {
         // Screen Y for ground surface = H - groundSurface = 540 - 180 = 360
         const groundScreenY = H - Config.groundSurface;
 
+        // Select textures based on time of day
+        let skyTex, seaTex, bushLargeTex, bushTex, swTex;
+        if (this.timeOfDay === 'night') {
+            skyTex = TC.skyNightTile;
+            seaTex = TC.seaNightFrames[this.seaFrame];
+            bushLargeTex = TC.bushLargeNightTile;
+            bushTex = TC.bushNightTile;
+            swTex = TC.sidewalkNightTile;
+        } else if (this.timeOfDay === 'sunset') {
+            skyTex = TC.skySunsetTile;
+            seaTex = TC.seaSunsetFrames[this.seaFrame];
+            bushLargeTex = TC.bushLargeSunsetTile;
+            bushTex = TC.bushSunsetTile;
+            swTex = TC.sidewalkSunsetTile;
+        } else {
+            skyTex = TC.skyTile;
+            seaTex = TC.seaFrames[this.seaFrame];
+            bushLargeTex = TC.bushLargeTile;
+            bushTex = TC.bushTile;
+            swTex = TC.sidewalkTile;
+        }
+
         // Calculate layer heights (scaled 3x)
-        const sidewalkH = TC.sidewalkTile.height * scale; // 16*3 = 48px
-        const bushH = TC.bushTile.height * scale; // 24*3 = 72px (small bushes)
-        const bushLargeH = TC.bushLargeTile.height * scale; // 48*3 = 144px (large bushes)
-        const seaH = TC.seaFrames[0].height * scale; // 32*3 = 96px
+        const sidewalkH = swTex.height * scale; // 16*3 = 48px
+        const bushH = bushTex.height * scale; // 24*3 = 72px (small bushes)
+        const bushLargeH = bushLargeTex.height * scale; // 48*3 = 144px (large bushes)
+        const seaH = TC.seaFrames[0].height * scale; // 32*3 = 96px (same dimensions for all palettes)
 
         // --- Layer 1: Sky (fills from top down to sea) ---
         // El agua debe estar detrás de los arbustos grandes (solapando por arriba)
         const seaScreenY = H - sidewalkH - bushLargeH - seaH + 60; // +60 para solapar con arbustos
-        this._drawTileLayerFillDown(ctx, TC.skyTile, 0.05, cameraX, scale, 0, W, seaScreenY);
+        this._drawTileLayerFillDown(ctx, skyTex, 0.05, cameraX, scale, 0, W, seaScreenY);
 
-        // --- Layer 2: Sun (top-right, very slow drift 0.02, animated rays) ---
-        const sunTex = TC.sunFrames[this.sunFrame];
-        const sunW = sunTex.width * scale;
-        const sunH = sunTex.height * scale;
-        const sunBaseX = W - sunW - 45;
-        const sunBaseY = 30;
-        const sunOffsetX = Math.round(cameraX * 0.02);
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(sunTex, Math.round(sunBaseX - sunOffsetX), sunBaseY, sunW, sunH);
+        // --- Layer 2: Sun (hidden at night, lower at sunset, orange at sunset) ---
+        if (this.timeOfDay !== 'night') {
+            const sunTex = this.timeOfDay === 'sunset'
+                ? TC.sunSunsetFrames[this.sunFrame]
+                : TC.sunFrames[this.sunFrame];
+            const sunW = sunTex.width * scale;
+            const sunH = sunTex.height * scale;
+            const sunBaseX = W - sunW - 45;
+            const sunBaseY = this.timeOfDay === 'sunset' ? 160 : 30;
+            const sunOffsetX = Math.round(cameraX * 0.02);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(sunTex, Math.round(sunBaseX - sunOffsetX), sunBaseY, sunW, sunH);
+        }
 
-        // --- Layer 3: Boats on horizon (scrollFactor 0.10) ---
+        // --- Layer 3: Sea tiles (scrollFactor 0.10, animated) ---
+        this._drawTileLayer(ctx, seaTex, 0.10, cameraX, scale, seaScreenY, W);
+
+        // --- Layer 4: Boats on horizon (DESPUÉS del mar para que se vean) ---
         const boatTex = TC.boatTexture;
-        const boatW = boatTex.width * scale;
-        const boatH = boatTex.height * scale;
-        const boatScreenY = seaScreenY - boatH * 0.3; // Barcos en el horizonte, parcialmente en el agua
+        const boatScale = scale * 1.2; // Barcos un poco más grandes
+        const boatW = boatTex.width * boatScale;
+        const boatH = boatTex.height * boatScale;
+        // Barcos en el horizonte - sobre el mar
+        const boatScreenY = seaScreenY - boatH * 0.3;
         ctx.imageSmoothingEnabled = false;
         for (const boat of this.boats) {
             const bx = Math.round(boat.x - cameraX * 0.10);
@@ -116,14 +165,10 @@ export class ParallaxSystem {
             }
         }
 
-        // --- Layer 4: Sea tiles (scrollFactor 0.10, animated) ---
-        const seaTexture = TC.seaFrames[this.seaFrame];
-        this._drawTileLayer(ctx, seaTexture, 0.10, cameraX, scale, seaScreenY, W);
-
         // --- Layer 5: Large bushes (background, scrollFactor 0.30) ---
         // Large bushes sit on top of sidewalk
         const bushLargeScreenY = H - sidewalkH - bushLargeH;
-        this._drawTileLayer(ctx, TC.bushLargeTile, 0.30, cameraX, scale, bushLargeScreenY, W);
+        this._drawTileLayer(ctx, bushLargeTex, 0.30, cameraX, scale, bushLargeScreenY, W);
 
         // --- Layer 6: Gardener NPCs (scrollFactor 0.35, middle) ---
         for (const g of this.gardeners) {
@@ -133,12 +178,15 @@ export class ParallaxSystem {
         // --- Layer 7: Small bushes (foreground, scrollFactor 0.45) ---
         // Small bushes sit on top of sidewalk
         const bushScreenY = H - sidewalkH - bushH;
-        this._drawTileLayer(ctx, TC.bushTile, 0.45, cameraX, scale, bushScreenY, W);
+        this._drawTileLayer(ctx, bushTex, 0.45, cameraX, scale, bushScreenY, W);
+
+        // --- Layer 7.5: Flores sobre los arbustos ---
+        this._drawFlowers(ctx, cameraX, scale, bushScreenY, W);
 
         // --- Layer 8: Sidewalk (scrollFactor 1.00) ---
         // Sidewalk at bottom of screen
         const swScreenY = H - sidewalkH;
-        this._drawTileLayer(ctx, TC.sidewalkTile, 1.0, cameraX, scale, swScreenY, W);
+        this._drawTileLayer(ctx, swTex, 1.0, cameraX, scale, swScreenY, W);
     }
 
     /**
@@ -160,6 +208,31 @@ export class ParallaxSystem {
                 const x = Math.round(startX + ix * tileW);
                 const y = Math.round(startY + iy * tileH);
                 ctx.drawImage(texture, x, y, tileW, tileH);
+            }
+        }
+    }
+
+    /**
+     * Draws random flowers on top of bushes.
+     */
+    _drawFlowers(ctx, cameraX, scale, bushY, canvasW) {
+        const scrollFactor = 0.45; // Mismo que arbustos pequeños
+        ctx.imageSmoothingEnabled = false;
+
+        for (const flower of this.flowers) {
+            const tex = TC.flowerTextures[flower.color];
+            if (!tex) continue;
+
+            // Apply individual flower scale
+            const flowerScale = scale * (flower.scale || 1.0);
+            const w = tex.width * flowerScale;
+            const h = tex.height * flowerScale;
+            const screenX = Math.round(flower.x - cameraX * scrollFactor - w / 2);
+            const screenY = bushY - flower.offsetY - h;
+
+            // Solo dibujar si está en pantalla
+            if (screenX > -w && screenX < canvasW + w) {
+                ctx.drawImage(tex, screenX, screenY, w, h);
             }
         }
     }

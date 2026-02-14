@@ -31,6 +31,22 @@ import { textPixels } from './sprites/fontPixels.js';
 import { heartFull, heartEmpty } from './sprites/heartPixels.js';
 import { speakerOn, speakerOff } from './sprites/musicIconPixels.js';
 
+// Flower and dog sprites
+import { flowerShape, flowerPaletteRed, flowerPaletteYellow, flowerPalettePink, flowerPaletteWhite, flowerPalettePurple, flowerPaletteOrange } from './sprites/flowerPixels.js';
+import { dogSitting1, dogSitting2, signPost, palette as dogPalette } from './sprites/dogPixels.js';
+
+// Projectile sprites
+import { soccerBall1, soccerBall2, soccerBall3, soccerPalette, hockeyStick1, hockeyStick2, hockeyStick3, hockeyPalette } from './sprites/projectilePixels.js';
+
+// Welcome sign sprites
+import { welcomeSignBoard, welcomeSignPalette } from './sprites/welcomeSignPixels.js';
+
+// Parents sprites
+import { parentsWaiting, parentsHugging, parentsHuggingChild, parentsPalette } from './sprites/parentsPixels.js';
+
+// Light pole sprites
+import { lightPole as lightPoleData, lightPolePalette } from './sprites/lightPolePixels.js';
+
 // --- Emi Textures ---
 export const emiIdle = renderSprite(EmiSprites.idle, Palettes.emi);
 export const emiWalk1 = renderSprite(EmiSprites.walk1, Palettes.emi);
@@ -76,6 +92,28 @@ export const bushTile = renderSprite(bushTileData, Palettes.environment);
 export const bushLargeTile = renderSprite(bushLargeTileData, Palettes.environment);
 export const sidewalkTile = renderSprite(sidewalkTileData, Palettes.environment);
 
+// --- Sunset Background Textures (level 6+) ---
+export const skySunsetTile = renderSprite(sky, Palettes.environmentSunset);
+export const seaSunsetFrames = [
+    renderSprite(seaFrame1, Palettes.environmentSunset),
+    renderSprite(seaFrame2, Palettes.environmentSunset),
+    renderSprite(seaFrame3, Palettes.environmentSunset),
+];
+export const bushSunsetTile = renderSprite(bushTileData, Palettes.environmentSunset);
+export const bushLargeSunsetTile = renderSprite(bushLargeTileData, Palettes.environmentSunset);
+export const sidewalkSunsetTile = renderSprite(sidewalkTileData, Palettes.environmentSunset);
+
+// --- Night Background Textures (level 12+) ---
+export const skyNightTile = renderSprite(sky, Palettes.environmentNight);
+export const seaNightFrames = [
+    renderSprite(seaFrame1, Palettes.environmentNight),
+    renderSprite(seaFrame2, Palettes.environmentNight),
+    renderSprite(seaFrame3, Palettes.environmentNight),
+];
+export const bushNightTile = renderSprite(bushTileData, Palettes.environmentNight);
+export const bushLargeNightTile = renderSprite(bushLargeTileData, Palettes.environmentNight);
+export const sidewalkNightTile = renderSprite(sidewalkTileData, Palettes.environmentNight);
+
 // --- Object Textures ---
 export const rock = renderSprite(rockData, Palettes.objects);
 export const bench = renderSprite(benchData, Palettes.objects);
@@ -89,6 +127,11 @@ export const birdFrames = [
     renderSprite(birdFrame1, Palettes.bird),
     renderSprite(birdFrame2, Palettes.bird),
     renderSprite(birdFrame3, Palettes.bird),
+];
+export const birdNightFrames = [
+    renderSprite(birdFrame1, Palettes.birdNight),
+    renderSprite(birdFrame2, Palettes.birdNight),
+    renderSprite(birdFrame3, Palettes.birdNight),
 ];
 export const trashCanFliesFrames = [
     renderSprite(trashCanFlies1, Palettes.objects),
@@ -104,6 +147,11 @@ export const sunFrames = [
     renderSprite(sun1, Palettes.sun),
     renderSprite(sun2, Palettes.sun),
     renderSprite(sun3, Palettes.sun),
+];
+export const sunSunsetFrames = [
+    renderSprite(sun1, Palettes.sunSunset),
+    renderSprite(sun2, Palettes.sunSunset),
+    renderSprite(sun3, Palettes.sunSunset),
 ];
 export const sunTexture = sunFrames[0]; // backwards compatibility
 export const boatTexture = renderSprite(boatData, Palettes.environment);
@@ -129,6 +177,54 @@ export const musicOffIcon = renderSprite(speakerOff, Palettes.ui);
 export const heartFullTex = renderSprite(heartFull, Palettes.heart);
 export const heartEmptyTex = renderSprite(heartEmpty, Palettes.heart);
 
+// --- Flower Textures (4 colors) ---
+function renderFlower(palette) {
+    // Convert palette from [[r,g,b,a]] to format renderSprite expects
+    const paletteFormatted = palette.map(c => c);
+    return renderSprite(flowerShape, paletteFormatted);
+}
+export const flowerTextures = {
+    red: renderFlower(flowerPaletteRed),
+    yellow: renderFlower(flowerPaletteYellow),
+    pink: renderFlower(flowerPalettePink),
+    white: renderFlower(flowerPaletteWhite),
+    purple: renderFlower(flowerPalettePurple),
+    orange: renderFlower(flowerPaletteOrange),
+};
+
+// --- Dog Textures (animated sitting) ---
+export const dogSitting1Tex = renderSprite(dogSitting1, dogPalette);
+export const dogSitting2Tex = renderSprite(dogSitting2, dogPalette);
+export const signPostTex = renderSprite(signPost, dogPalette);
+// Legacy
+export const dogLeftTex = dogSitting1Tex;
+export const dogRightTex = dogSitting2Tex;
+export const dogTexture = dogSitting1Tex;
+
+// --- Welcome Sign Texture ---
+export const welcomeSign = renderSprite(welcomeSignBoard, welcomeSignPalette);
+
+// --- Light Pole Textures ---
+export const lightPoleTex = renderSprite(lightPoleData, lightPolePalette);
+export const lightPoleNightTex = renderSprite(lightPoleData, Palettes.lightPoleNight);
+
+// --- Parents Textures ---
+export const parentsWaitingTex = renderSprite(parentsWaiting, parentsPalette);
+export const parentsHuggingTex = renderSprite(parentsHugging, parentsPalette);
+export const parentsHuggingChildTex = renderSprite(parentsHuggingChild, parentsPalette);
+
+// --- Projectile Textures ---
+export const soccerBallFrames = [
+    renderSprite(soccerBall1, soccerPalette),
+    renderSprite(soccerBall2, soccerPalette),
+    renderSprite(soccerBall3, soccerPalette),
+];
+export const hockeyStickFrames = [
+    renderSprite(hockeyStick1, hockeyPalette),
+    renderSprite(hockeyStick2, hockeyPalette),
+    renderSprite(hockeyStick3, hockeyPalette),
+];
+
 /**
  * Renders a text string to an offscreen canvas using the bitmap font.
  * @param {string} text - Text to render.
@@ -142,6 +238,18 @@ export function renderText(text) {
         return c;
     }
     return renderSprite(pixels, Palettes.ui);
+}
+
+export function renderTextBlack(text) {
+    const pixels = textPixels(text);
+    if (pixels.length === 0) {
+        const c = document.createElement('canvas');
+        c.width = 1; c.height = 1;
+        return c;
+    }
+    const blackPalette = [...Palettes.ui];
+    blackPalette[7] = [30, 30, 30];
+    return renderSprite(pixels, blackPalette);
 }
 
 /**

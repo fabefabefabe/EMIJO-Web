@@ -6,6 +6,8 @@ import { SplashScene } from './scenes/splashScene.js';
 import { MenuScene } from './scenes/menuScene.js';
 import { GameScene } from './scenes/gameScene.js';
 import { LevelCompleteScene } from './scenes/levelCompleteScene.js';
+import { EnterInitialsScene } from './scenes/enterInitialsScene.js';
+import { HallOfFameScene } from './scenes/hallOfFameScene.js';
 import { music } from './audio/music.js';
 
 // --- Canvas Setup ---
@@ -42,6 +44,7 @@ const input = new InputManager();
 const gameState = {
     selectedCharacter: 'emi', // 'emi' or 'jo'
     musicMuted: false,
+    totalMeters: 0,
 };
 
 // --- Game Object (passed to scenes) ---
@@ -64,6 +67,8 @@ const scenes = {
     menu: new MenuScene(game),
     game: new GameScene(game),
     levelComplete: new LevelCompleteScene(game),
+    enterInitials: new EnterInitialsScene(game),
+    hallOfFame: new HallOfFameScene(game),
 };
 
 let currentScene = null;
@@ -74,13 +79,19 @@ function setScene(name) {
         console.error(`Scene "${name}" not found`);
         return;
     }
-    // Re-create game and levelComplete scenes to reset state
+    // Re-create scenes that need fresh state
     if (name === 'game') {
         scenes.game = new GameScene(game);
         currentScene = scenes.game;
     } else if (name === 'levelComplete') {
         scenes.levelComplete = new LevelCompleteScene(game);
         currentScene = scenes.levelComplete;
+    } else if (name === 'enterInitials') {
+        scenes.enterInitials = new EnterInitialsScene(game);
+        currentScene = scenes.enterInitials;
+    } else if (name === 'hallOfFame') {
+        scenes.hallOfFame = new HallOfFameScene(game);
+        currentScene = scenes.hallOfFame;
     } else {
         currentScene = scene;
     }

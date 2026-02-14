@@ -1,4 +1,4 @@
-// Splash Scene - shows EMIJO logo with fade in/hold/fade out
+// Splash Scene - shows EMIJO logo with fade in, then waits for Enter
 import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 
@@ -10,26 +10,38 @@ export class SplashScene {
     enter() {
         this.timer = 0;
         this.alpha = 0;
+        this.waitingForInput = false;
+        this.promptAlpha = 0;
+        this.promptDir = 1;
     }
 
     update(dt) {
-        this.timer += dt;
+        const input = this.game.input;
 
         // Fade in: 0 - 0.5s
         if (this.timer < 0.5) {
+            this.timer += dt;
             this.alpha = this.timer / 0.5;
         }
-        // Hold: 0.5 - 2.5s
-        else if (this.timer < 2.5) {
-            this.alpha = 1.0;
-        }
-        // Fade out: 2.5 - 3.0s
-        else if (this.timer < 3.0) {
-            this.alpha = 1.0 - (this.timer - 2.5) / 0.5;
-        }
-        // Transition to menu
+        // After fade in, wait for input
         else {
-            this.game.setScene('menu');
+            this.alpha = 1.0;
+            this.waitingForInput = true;
+
+            // Animate prompt alpha (pulsing)
+            this.promptAlpha += this.promptDir * dt * 1.5;
+            if (this.promptAlpha >= 1.0) {
+                this.promptAlpha = 1.0;
+                this.promptDir = -1;
+            } else if (this.promptAlpha <= 0.3) {
+                this.promptAlpha = 0.3;
+                this.promptDir = 1;
+            }
+
+            // Check for Enter key
+            if (input.consumeKey('Enter') || input.consumeKey('Space')) {
+                this._goToMenu();
+            }
         }
     }
 
@@ -46,21 +58,43 @@ export class SplashScene {
         const lw = TC.logo.width * logoScale;
         const lh = TC.logo.height * logoScale;
         const lx = (W - lw) / 2;
-        const ly = (H - lh) / 2;
+        const ly = H * 0.35 - lh / 2;
 
         ctx.save();
         ctx.globalAlpha = this.alpha;
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(TC.logo, lx, ly, lw, lh);
         ctx.restore();
+
+        // Draw "PULSA ENTER PARA CONTINUAR" when waiting
+        if (this.waitingForInput) {
+            const promptText = TC.renderText('PULSA ENTER PARA CONTINUAR');
+            const promptScale = Config.pixelScale * 0.8;
+            const pw = promptText.width * promptScale;
+            const ph = promptText.height * promptScale;
+            const px = (W - pw) / 2;
+            const py = H * 0.7;
+
+            ctx.save();
+            ctx.globalAlpha = this.promptAlpha;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(promptText, px, py, pw, ph);
+            ctx.restore();
+        }
     }
 
-    onClick(x, y) {
-        // Start menu music on click (requires user interaction)
+    _goToMenu() {
+        // Start menu music (requires user interaction)
         if (this.game.music) {
             this.game.music.playTrack('menu');
         }
-        // Skip splash on click
         this.game.setScene('menu');
+    }
+
+    onClick(x, y) {
+        // Also allow click/tap to continue
+        if (this.waitingForInput) {
+            this._goToMenu();
+        }
     }
 }

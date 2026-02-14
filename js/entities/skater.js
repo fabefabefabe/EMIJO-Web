@@ -8,10 +8,12 @@ export class Skater {
      * @param {number} direction - 1 = right, -1 = left
      */
     constructor(startX, direction) {
+        this.startX = startX;
         this.x = startX;
         this.direction = direction;
         this.y = Config.groundSurface;
-        this.speed = 800; // Very fast
+        this.speed = 500; // Slower than before (was 800)
+        this.scaleFactor = 1.5; // Make skater bigger
 
         this.alive = true;
         this.frame = 0;
@@ -29,32 +31,32 @@ export class Skater {
             this.frame = (this.frame + 1) % 2;
         }
 
-        // Remove if far offscreen
-        if (this.x < -200 || this.x > Config.levelWidth + 200) {
+        // Remove if traveled too far from start (3 screen widths)
+        if (Math.abs(this.x - this.startX) > Config.sceneWidth * 3) {
             this.alive = false;
         }
     }
 
     getAABB() {
-        const scale = Config.pixelScale;
+        const scale = Config.pixelScale * this.scaleFactor;
         return {
             x: this.x,
             y: this.y,
-            hw: 8 * scale,
-            hh: 10 * scale,
+            hw: 10 * scale,
+            hh: 14 * scale,
         };
     }
 
     draw(ctx, cameraX) {
         const texture = TC.skaterFrames[this.frame];
-        const scale = Config.pixelScale;
+        const scale = Config.pixelScale * this.scaleFactor; // Apply scale factor
         const w = texture.width * scale;
         const h = texture.height * scale;
         const screenX = this.x - cameraX - w / 2;
 
-        // Position on sidewalk
-        const sidewalkH = 16 * scale;
-        const screenY = Config.sceneHeight - sidewalkH - h;
+        // Misma fórmula que el Player para altura correcta
+        const sidewalkH = 16 * Config.pixelScale;
+        const screenY = Config.sceneHeight - sidewalkH - h - (this.y - Config.groundSurface);
 
         ctx.save();
         ctx.imageSmoothingEnabled = false;

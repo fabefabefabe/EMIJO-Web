@@ -36,6 +36,7 @@ export class Obstacle {
         this.texture = TEXTURES[type]();
         this.x = x;
         this.isOverhead = OVERHEAD_TYPES.has(type);
+        this.destroyed = false; // For projectile collision
 
         // Trash can animation
         if (type === 'trashCan') {

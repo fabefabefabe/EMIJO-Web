@@ -12,6 +12,9 @@ export class LevelCompleteScene {
         this.characterName = charType === 'jo' ? 'JO' : 'EMI';
         this.portrait = TC.getCharacterTextures(charType).portrait;
 
+        // Obtener nivel actual
+        this.currentLevel = this.game.state.currentLevel || 1;
+
         // Stars
         this.stars = [];
         for (let i = 0; i < 30; i++) {
@@ -33,8 +36,8 @@ export class LevelCompleteScene {
         this.instructionAlpha = 1.0;
         this.instructionDir = -1;
 
-        // Text caches (Spanish)
-        this._titleText = TC.renderText('NIVEL COMPLETO!');
+        // Text caches (Spanish) - mostrar nivel completado
+        this._titleText = TC.renderText('NIVEL ' + this.currentLevel + ' COMPLETO!');
         this._congratsText = TC.renderText('BIEN HECHO ' + this.characterName + '!');
         this._continueText = TC.renderText('PULSA ENTER PARA SEGUIR');
 
@@ -42,7 +45,6 @@ export class LevelCompleteScene {
         this.proceedTimer = 0;
 
         // Note: Victory music is played when level completes in gameScene
-        // If we want it to loop, we could restart it here, but victory is short
     }
 
     update(dt) {
@@ -80,9 +82,11 @@ export class LevelCompleteScene {
         const input = this.game.input;
         if (this.canProceed) {
             if (input.consumeKey('Enter') || input.consumeKey('Space')) {
-                // Return to menu music
-                this.game.music.playTrack('menu');
-                this.game.setScene('menu');
+                // Avanzar al siguiente nivel
+                this.game.state.currentLevel = this.currentLevel + 1;
+                // Play game music for next level
+                this.game.music.playTrack('game');
+                this.game.setScene('game');
             }
         }
     }
@@ -171,9 +175,11 @@ export class LevelCompleteScene {
         }
 
         if (this.canProceed) {
-            // Return to menu music
-            this.game.music.playTrack('menu');
-            this.game.setScene('menu');
+            // Avanzar al siguiente nivel
+            this.game.state.currentLevel = this.currentLevel + 1;
+            // Play game music for next level
+            this.game.music.playTrack('game');
+            this.game.setScene('game');
         }
     }
 

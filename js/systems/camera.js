@@ -1,4 +1,4 @@
-// Camera System - smooth follow with lerp, clamped to level bounds
+// Camera System - forward-only scrolling (never goes back)
 import { Config } from '../config.js';
 
 export class Camera {
@@ -7,19 +7,21 @@ export class Camera {
     }
 
     /**
-     * Updates camera position to follow the player with smooth interpolation.
-     * @param {number} playerX - Player's X position in world coordinates.
+     * Updates camera position to follow the player.
+     * Camera only advances forward - never scrolls back.
+     * Player can walk back but only within the visible screen.
      */
     update(playerX) {
         const halfWidth = Config.sceneWidth / 2;
-        const minX = 0;
-        const maxX = Config.levelWidth - Config.sceneWidth;
 
-        // Target: center camera on player, clamped to level bounds
-        const targetX = Math.max(minX, Math.min(maxX, playerX - halfWidth));
+        // Target: center camera on player, but never go below 0
+        const targetX = Math.max(0, playerX - halfWidth);
 
         // Smooth camera follow (linear interpolation)
-        this.x += (targetX - this.x) * Config.cameraLerp;
+        const smoothed = this.x + (targetX - this.x) * Config.cameraLerp;
+
+        // Camera only advances - never goes back
+        this.x = Math.max(this.x, smoothed);
     }
 
     /** Current camera offset for parallax and drawing */

@@ -2,6 +2,7 @@
 import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 import { ParallaxSystem } from '../systems/parallax.js';
+import { Bird } from '../entities/bird.js';
 
 export class MenuScene {
     constructor(game) {
@@ -18,6 +19,16 @@ export class MenuScene {
         this.flashTimer = -1; // -1 = not flashing
         this.flashCount = 0;
         this.musicStarted = false; // Track if menu music has started
+
+        // Character animation - looking left/right randomly
+        this.emiLookTimer = Math.random() * 2;
+        this.emiLookDir = 0; // -1=left, 0=center, 1=right
+        this.joLookTimer = Math.random() * 2;
+        this.joLookDir = 0;
+
+        // Background birds
+        this.menuBirds = [];
+        this.birdSpawnTimer = 0;
     }
 
     update(dt) {
@@ -25,6 +36,30 @@ export class MenuScene {
 
         // Animate parallax (sea waves)
         this.parallax.update(dt);
+
+        // Update background birds
+        this.birdSpawnTimer += dt;
+        if (this.birdSpawnTimer >= 4.5) { // Spawn bird every 4.5 seconds
+            this.birdSpawnTimer = 0;
+            this.menuBirds.push(Bird.spawnRandom(0));
+        }
+        for (const bird of this.menuBirds) {
+            bird.update(dt);
+        }
+        this.menuBirds = this.menuBirds.filter(b => b.alive);
+
+        // Animate character looking directions
+        this.emiLookTimer += dt;
+        if (this.emiLookTimer >= 2 + Math.random() * 2) {
+            this.emiLookTimer = 0;
+            this.emiLookDir = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+        }
+
+        this.joLookTimer += dt;
+        if (this.joLookTimer >= 2 + Math.random() * 2) {
+            this.joLookTimer = 0;
+            this.joLookDir = Math.floor(Math.random() * 3) - 1;
+        }
 
         // Selection indicator blink
         this.blinkTimer += dt;
@@ -81,6 +116,11 @@ export class MenuScene {
         // Draw parallax background (sky + sea)
         this.parallax.draw(ctx, 0);
 
+        // Draw background birds (behind UI)
+        for (const bird of this.menuBirds) {
+            bird.draw(ctx, 0);
+        }
+
         // Logo at 75% height
         const logoScale = scale * 1.5;
         const lw = TC.logo.width * logoScale;
@@ -114,11 +154,20 @@ export class MenuScene {
             ctx.restore();
         }
 
-        // Draw Emi portrait (handle flash)
+        // Draw Emi portrait (handle flash and look animation)
         const emiAlpha = this._getPortraitAlpha(0);
         ctx.save();
         ctx.globalAlpha = emiAlpha;
-        ctx.drawImage(TC.emiPortrait, emiX, emiY, emiW, emiH);
+        // Apply look direction offset
+        const emiOffsetX = this.emiLookDir * 3;
+        if (this.emiLookDir === -1) {
+            // Looking left - flip horizontally
+            ctx.translate(emiX + emiW + emiOffsetX, emiY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(TC.emiPortrait, 0, 0, emiW, emiH);
+        } else {
+            ctx.drawImage(TC.emiPortrait, emiX + emiOffsetX, emiY, emiW, emiH);
+        }
         ctx.restore();
 
         // Jo portrait
@@ -136,10 +185,20 @@ export class MenuScene {
             ctx.restore();
         }
 
+        // Draw Jo portrait (handle flash and look animation)
         const joAlpha = this._getPortraitAlpha(1);
         ctx.save();
         ctx.globalAlpha = joAlpha;
-        ctx.drawImage(TC.joPortrait, joX, joY, joW, joH);
+        // Apply look direction offset
+        const joOffsetX = this.joLookDir * 3;
+        if (this.joLookDir === 1) {
+            // Looking right - flip horizontally
+            ctx.translate(joX + joW + joOffsetX, joY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(TC.joPortrait, 0, 0, joW, joH);
+        } else {
+            ctx.drawImage(TC.joPortrait, joX + joOffsetX, joY, joW, joH);
+        }
         ctx.restore();
 
         // Name labels (same size as instruction text)
@@ -237,6 +296,8 @@ export class MenuScene {
 
     _startGame() {
         this.game.state.selectedCharacter = this.selectedIndex === 0 ? 'emi' : 'jo';
+        // Resetear nivel a 1 al iniciar nuevo juego
+        this.game.state.currentLevel = 1;
         this.game.setScene('game');
     }
 }

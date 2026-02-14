@@ -379,6 +379,130 @@ export class MusicSystem {
         });
     }
 
+    playKickSound() {
+        if (!this.audioCtx || this.isMuted) return;
+
+        // Soccer ball kick - punchy "thwack" sound
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, this.audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.audioCtx.currentTime + 0.08);
+
+        gain.gain.setValueAtTime(0.25, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.12);
+
+        // Add a higher "whoosh" for the ball flying
+        const osc2 = this.audioCtx.createOscillator();
+        const gain2 = this.audioCtx.createGain();
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(600, this.audioCtx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(1200, this.audioCtx.currentTime + 0.15);
+
+        gain2.gain.setValueAtTime(0.08, this.audioCtx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.15);
+
+        osc2.connect(gain2);
+        gain2.connect(this.masterGain);
+
+        osc2.start();
+        osc2.stop(this.audioCtx.currentTime + 0.15);
+    }
+
+    playShootSound() {
+        if (!this.audioCtx || this.isMuted) return;
+
+        // Hockey stick slap shot - sharper attack
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(500, this.audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 0.06);
+
+        gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.1);
+
+        // Swoosh effect
+        const noise = this.audioCtx.createOscillator();
+        const noiseGain = this.audioCtx.createGain();
+
+        noise.type = 'square';
+        noise.frequency.setValueAtTime(800, this.audioCtx.currentTime);
+        noise.frequency.exponentialRampToValueAtTime(1500, this.audioCtx.currentTime + 0.1);
+
+        noiseGain.gain.setValueAtTime(0.06, this.audioCtx.currentTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.12);
+
+        noise.connect(noiseGain);
+        noiseGain.connect(this.masterGain);
+
+        noise.start();
+        noise.stop(this.audioCtx.currentTime + 0.12);
+    }
+
+    playDestroySound() {
+        if (!this.audioCtx || this.isMuted) return;
+
+        // Obstacle destroyed - satisfying "crash" sound
+        const bufferSize = this.audioCtx.sampleRate * 0.15;
+        const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.1));
+        }
+
+        const noise = this.audioCtx.createBufferSource();
+        const noiseGain = this.audioCtx.createGain();
+        const filter = this.audioCtx.createBiquadFilter();
+
+        noise.buffer = buffer;
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
+
+        noiseGain.gain.setValueAtTime(0.25, this.audioCtx.currentTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.15);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.masterGain);
+
+        noise.start();
+        noise.stop(this.audioCtx.currentTime + 0.15);
+
+        // Add a descending tone for impact
+        const osc = this.audioCtx.createOscillator();
+        const oscGain = this.audioCtx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, this.audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, this.audioCtx.currentTime + 0.12);
+
+        oscGain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.15);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.masterGain);
+
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.15);
+    }
+
     // ==========================================
     // PLAYBACK CONTROL
     // ==========================================

@@ -8,11 +8,13 @@ export class Bird {
      * @param {number} startX - Starting X position (world coords)
      * @param {number} startY - Starting Y position (game coords, Y-up)
      * @param {number} flyDuration - How long to cross the screen (seconds)
+     * @param {string} timeOfDay - 'day', 'sunset', or 'night'
      */
-    constructor(startX, startY, flyDuration) {
+    constructor(startX, startY, flyDuration, timeOfDay = 'day') {
         this.x = startX;
         this.y = startY;
         this.startY = startY;
+        this.timeOfDay = timeOfDay;
 
         // Flight
         const endX = -40;
@@ -32,12 +34,12 @@ export class Bird {
     /**
      * Creates a random bird at the right edge of the visible area.
      */
-    static spawnRandom(cameraX) {
+    static spawnRandom(cameraX, timeOfDay = 'day') {
         const startX = cameraX + Config.sceneWidth + 40;
         const startY = Config.birdMinY + Math.random() * (Config.birdMaxY - Config.birdMinY);
         const flyDuration = Config.birdMinDuration +
             Math.random() * (Config.birdMaxDuration - Config.birdMinDuration);
-        return new Bird(startX, startY, flyDuration);
+        return new Bird(startX, startY, flyDuration, timeOfDay);
     }
 
     update(dt) {
@@ -76,7 +78,8 @@ export class Bird {
 
     draw(ctx, cameraX) {
         const frameIdx = this.flapCycle[this.flapIndex];
-        const texture = TC.birdFrames[frameIdx];
+        const frames = this.timeOfDay === 'night' ? TC.birdNightFrames : TC.birdFrames;
+        const texture = frames[frameIdx];
         const scale = Config.pixelScale;
         const w = texture.width * scale;
         const h = texture.height * scale;

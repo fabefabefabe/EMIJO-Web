@@ -118,6 +118,69 @@ export const Palettes = {
         [255,255,180],      // 4: pale yellow (rays)
     ],
 
+    environmentSunset: [
+        null,               // 0: transparent
+        [255,140,70],       // 1: sunset orange (was sky blue light)
+        [180,80,120],       // 2: sunset pink-purple (was sky blue mid)
+        [60,80,140],        // 3: twilight sea
+        [40,60,110],        // 4: twilight sea dark
+        [25,40,80],         // 5: deep twilight
+        [60,120,60],        // 6: bush green light (darker for evening)
+        [35,85,35],         // 7: bush green
+        [20,60,20],         // 8: bush green dark
+        [170,160,150],      // 9: sidewalk warm light
+        [145,135,130],      // 10: sidewalk warm
+        [115,110,105],      // 11: sidewalk warm dark
+        [90,85,80],         // 12: sidewalk warm crack
+        [255,200,150],      // 13: warm white (clouds/foam tinted)
+        [200,180,150],      // 14: warm sand
+        [180,160,140],      // 15: warm sand dark
+    ],
+
+    environmentNight: [
+        null,               // 0: transparent
+        [15,15,40],         // 1: dark sky
+        [10,10,30],         // 2: very dark sky
+        [15,25,55],         // 3: night sea
+        [10,18,40],         // 4: night sea dark
+        [8,12,30],          // 5: deep night sea
+        [25,55,25],         // 6: night bush green light
+        [15,38,15],         // 7: night bush green
+        [8,25,8],           // 8: night bush green dark
+        [80,80,90],         // 9: night sidewalk light
+        [65,65,75],         // 10: night sidewalk
+        [50,50,60],         // 11: night sidewalk dark
+        [38,38,45],         // 12: night sidewalk crack
+        [120,120,140],      // 13: dim white (clouds/foam at night)
+        [90,90,100],        // 14: dark sand
+        [75,75,85],         // 15: dark sand shadow
+    ],
+
+    birdNight: [
+        null,               // 0: transparent
+        [10,10,10],         // 1: body dark (near black)
+        [15,15,15],         // 2: body (very dark)
+        [20,20,20],         // 3: body light (still dark)
+        [25,25,25],         // 4: belly (dark, no white)
+        [30,20,10],         // 5: beak (very dark orange)
+    ],
+
+    sunSunset: [
+        null,               // 0: transparent
+        [255,160,50],       // 1: orange core
+        [255,120,30],       // 2: deep orange
+        [255,80,20],        // 3: red-orange edge
+        [255,200,100],      // 4: warm pale rays
+    ],
+
+    lightPoleNight: [
+        [0,0,0,0],          // 0: transparent
+        [50,50,60],         // 1: dark gray (pole body, darker at night)
+        [80,80,90],         // 2: mid gray (detail, darker at night)
+        [110,110,120],      // 3: light gray (highlight, dimmer)
+        [255,255,180],      // 4: bright warm white (lantern glowing!)
+    ],
+
     gardener: [
         null,               // 0: transparent
         [255,200,160],      // 1: skin
