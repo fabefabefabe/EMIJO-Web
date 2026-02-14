@@ -12,7 +12,7 @@ export class Skater {
         this.x = startX;
         this.direction = direction;
         this.y = Config.groundSurface;
-        this.speed = Config.joggerSpeed; // Same speed as jogger
+        this.speed = Config.skaterSpeed; // Separate skater speed
         this.scaleFactor = 1.5; // Make skater bigger
 
         this.alive = true;

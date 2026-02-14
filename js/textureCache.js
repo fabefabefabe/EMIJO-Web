@@ -5,6 +5,12 @@ import { Palettes } from './palettes.js';
 // Character sprites
 import * as EmiSprites from './sprites/emiSprites.js';
 import * as JoSprites from './sprites/joSprites.js';
+import * as EmiBeachSprites from './sprites/emiBeachSprites.js';
+import * as JoBeachSprites from './sprites/joBeachSprites.js';
+
+// Portrait animation frames
+import { portraitOpen as emiPortraitOpen, portraitBlink as emiPortraitBlink, portraitLook as emiPortraitLook } from './sprites/emiPortraitFrames.js';
+import { portraitOpen as joPortraitOpen, portraitBlink as joPortraitBlink, portraitLook as joPortraitLook } from './sprites/joPortraitFrames.js';
 
 // Background sprites
 import { sky } from './sprites/skyPixels.js';
@@ -16,7 +22,7 @@ import { tile as sidewalkTileData } from './sprites/sidewalkPixels.js';
 // Object sprites
 import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, trashCanFalling as trashCanFallingData, trashCanSpilled as trashCanSpilledData, potholeFlat as potholeFlatData, potholeFallIn as potholeFallInData, potholeEyes as potholeEyesData, potholeEyesClosed as potholeEyesClosedData, potholeFallInBody as potholeFallInBodyData, potholeFallInHole as potholeFallInHoleData, cooler as coolerData, tree as treeData, leaf as leafData } from './sprites/obstaclePixels.js';
 import { joggerRun1, joggerRun2, joggerFallen } from './sprites/joggerPixels.js';
-import { flag as flagData } from './sprites/flagPixels.js';
+import { flag as flagData, flag1 as flag1Data, flag2 as flag2Data, flag3 as flag3Data } from './sprites/flagPixels.js';
 import { frame1 as birdFrame1, frame2 as birdFrame2, frame3 as birdFrame3 } from './sprites/birdPixels.js';
 
 // Sun, moon, boat, gardener, skater sprites
@@ -38,7 +44,7 @@ import { flowerShape, flowerPaletteRed, flowerPaletteYellow, flowerPalettePink, 
 import { dogSitting1, dogSitting2, signPost, dogCanopy1, dogCanopy2, palette as dogPalette } from './sprites/dogPixels.js';
 
 // Projectile sprites
-import { soccerBall1, soccerBall2, soccerBall3, soccerPalette, hockeyStick1, hockeyStick2, hockeyStick3, hockeyPalette } from './sprites/projectilePixels.js';
+import { soccerBall1, soccerBall2, soccerBall3, soccerPalette, arrow1, arrow2, arrow3, arrowPalette, hockeyStick1, hockeyStick2, hockeyStick3, hockeyPalette } from './sprites/projectilePixels.js';
 
 // Welcome sign sprites
 import { welcomeSignBoard, welcomeSignPalette } from './sprites/welcomeSignPixels.js';
@@ -53,6 +59,9 @@ import { lightPole as lightPoleData, lightPolePalette } from './sprites/lightPol
 import { tile as sandTileData } from './sprites/sandPixels.js';
 import { beachBall as beachBallData, beachBallPalette, beachUmbrella as beachUmbrellaData, beachUmbrellaPalette } from './sprites/beachPixels.js';
 import { sandcastle1 as sandcastle1Data, sandcastle2 as sandcastle2Data, sandcastlePalette } from './sprites/sandcastlePixels.js';
+
+// Beagle sprites
+import { beaglePalette, beagleSit, beagleRun1, beagleRun2, beagleSniff1, beagleSniff2 } from './sprites/beaglePixels.js';
 
 // Bonfire and hippie sprites
 import { bonfire1, bonfire2, bonfire3, bonfire4, bonfirePalette } from './sprites/bonfirePixels.js';
@@ -91,6 +100,48 @@ export const joLyingDown = renderSprite(JoSprites.lyingDown, Palettes.jo);
 export const joPortrait = renderSprite(JoSprites.portrait, Palettes.jo);
 
 export const joWalkFrames = [joWalk1, joWalk2, joWalk3, joWalk4, joWalk5, joWalk6];
+
+// --- Emi Beach Textures ---
+export const emiBeachIdle = renderSprite(EmiBeachSprites.idle, Palettes.emi);
+export const emiBeachWalk1 = renderSprite(EmiBeachSprites.walk1, Palettes.emi);
+export const emiBeachWalk2 = renderSprite(EmiBeachSprites.walk2, Palettes.emi);
+export const emiBeachWalk3 = renderSprite(EmiBeachSprites.walk3, Palettes.emi);
+export const emiBeachWalk4 = renderSprite(EmiBeachSprites.walk4, Palettes.emi);
+export const emiBeachWalk5 = renderSprite(EmiBeachSprites.walk5, Palettes.emi);
+export const emiBeachWalk6 = renderSprite(EmiBeachSprites.walk6, Palettes.emi);
+export const emiBeachJump = renderSprite(EmiBeachSprites.jump, Palettes.emi);
+export const emiBeachCrouch = renderSprite(EmiBeachSprites.crouch, Palettes.emi);
+export const emiBeachFall = renderSprite(EmiBeachSprites.fall, Palettes.emi);
+export const emiBeachGetUp = renderSprite(EmiBeachSprites.getUp, Palettes.emi);
+export const emiBeachLyingDown = renderSprite(EmiBeachSprites.lyingDown, Palettes.emi);
+export const emiBeachWalkFrames = [emiBeachWalk1, emiBeachWalk2, emiBeachWalk3, emiBeachWalk4, emiBeachWalk5, emiBeachWalk6];
+
+// --- Jo Beach Textures ---
+export const joBeachIdle = renderSprite(JoBeachSprites.idle, Palettes.jo);
+export const joBeachWalk1 = renderSprite(JoBeachSprites.walk1, Palettes.jo);
+export const joBeachWalk2 = renderSprite(JoBeachSprites.walk2, Palettes.jo);
+export const joBeachWalk3 = renderSprite(JoBeachSprites.walk3, Palettes.jo);
+export const joBeachWalk4 = renderSprite(JoBeachSprites.walk4, Palettes.jo);
+export const joBeachWalk5 = renderSprite(JoBeachSprites.walk5, Palettes.jo);
+export const joBeachWalk6 = renderSprite(JoBeachSprites.walk6, Palettes.jo);
+export const joBeachJump = renderSprite(JoBeachSprites.jump, Palettes.jo);
+export const joBeachCrouch = renderSprite(JoBeachSprites.crouch, Palettes.jo);
+export const joBeachFall = renderSprite(JoBeachSprites.fall, Palettes.jo);
+export const joBeachGetUp = renderSprite(JoBeachSprites.getUp, Palettes.jo);
+export const joBeachLyingDown = renderSprite(JoBeachSprites.lyingDown, Palettes.jo);
+export const joBeachWalkFrames = [joBeachWalk1, joBeachWalk2, joBeachWalk3, joBeachWalk4, joBeachWalk5, joBeachWalk6];
+
+// --- Portrait Animation Frames ---
+export const emiPortraitFrames = [
+    renderSprite(emiPortraitOpen, Palettes.emi),
+    renderSprite(emiPortraitBlink, Palettes.emi),
+    renderSprite(emiPortraitLook, Palettes.emi),
+];
+export const joPortraitFrames = [
+    renderSprite(joPortraitOpen, Palettes.jo),
+    renderSprite(joPortraitBlink, Palettes.jo),
+    renderSprite(joPortraitLook, Palettes.jo),
+];
 
 // --- Background Textures ---
 export const skyTile = renderSprite(sky, Palettes.environment);
@@ -142,6 +193,11 @@ export const cooler = renderSprite(coolerData, Palettes.objects);
 export const tree = renderSprite(treeData, Palettes.objects);
 export const leafTex = renderSprite(leafData, Palettes.objects);
 export const flag = renderSprite(flagData, Palettes.objects);
+export const flagFrames = [
+    renderSprite(flag1Data, Palettes.objects),
+    renderSprite(flag2Data, Palettes.objects),
+    renderSprite(flag3Data, Palettes.objects),
+];
 
 export const birdFrames = [
     renderSprite(birdFrame1, Palettes.bird),
@@ -266,6 +322,13 @@ export const hippieFrames = [
     renderSprite(hippie2Data, hippiePalette),
 ];
 
+// --- Beagle Textures ---
+export const beagleSitTex = renderSprite(beagleSit, beaglePalette);
+export const beagleRun1Tex = renderSprite(beagleRun1, beaglePalette);
+export const beagleRun2Tex = renderSprite(beagleRun2, beaglePalette);
+export const beagleSniff1Tex = renderSprite(beagleSniff1, beaglePalette);
+export const beagleSniff2Tex = renderSprite(beagleSniff2, beaglePalette);
+
 // --- Parents Textures ---
 export const parentsWaitingTex = renderSprite(parentsWaiting, parentsPalette);
 export const parentsHuggingTex = renderSprite(parentsHugging, parentsPalette);
@@ -276,11 +339,12 @@ export const soccerBallFrames = [
     renderSprite(soccerBall2, soccerPalette),
     renderSprite(soccerBall3, soccerPalette),
 ];
-export const hockeyStickFrames = [
-    renderSprite(hockeyStick1, hockeyPalette),
-    renderSprite(hockeyStick2, hockeyPalette),
-    renderSprite(hockeyStick3, hockeyPalette),
+export const arrowFrames = [
+    renderSprite(arrow1, arrowPalette),
+    renderSprite(arrow2, arrowPalette),
+    renderSprite(arrow3, arrowPalette),
 ];
+export const hockeyStickFrames = arrowFrames; // backwards compat
 
 /**
  * Renders a text string to an offscreen canvas using the bitmap font.
@@ -295,6 +359,30 @@ export function renderText(text) {
         return c;
     }
     return renderSprite(pixels, Palettes.ui);
+}
+
+export function renderTextBold(text) {
+    const pixels = textPixels(text);
+    if (pixels.length === 0) {
+        const c = document.createElement('canvas');
+        c.width = 1; c.height = 1;
+        return c;
+    }
+    // Expand each pixel +1 right to simulate bold
+    const h = pixels.length;
+    const w = pixels[0].length;
+    const boldPixels = [];
+    for (let r = 0; r < h; r++) {
+        const newRow = new Array(w + 1).fill(0);
+        for (let c = 0; c < w; c++) {
+            if (pixels[r][c] !== 0) {
+                newRow[c] = pixels[r][c];
+                newRow[c + 1] = pixels[r][c];
+            }
+        }
+        boldPixels.push(newRow);
+    }
+    return renderSprite(boldPixels, Palettes.ui);
 }
 
 export function renderTextBlack(text) {
@@ -312,9 +400,22 @@ export function renderTextBlack(text) {
 /**
  * Returns all textures for a character type.
  * @param {'emi'|'jo'} type
+ * @param {boolean} isBeach - If true, return beach outfit textures
  */
-export function getCharacterTextures(type) {
+export function getCharacterTextures(type, isBeach = false) {
     if (type === 'jo') {
+        if (isBeach) {
+            return {
+                idle: joBeachIdle,
+                walk: joBeachWalkFrames,
+                jump: joBeachJump,
+                crouch: joBeachCrouch,
+                fall: joBeachFall,
+                lyingDown: joBeachLyingDown,
+                getUp: joBeachGetUp,
+                portrait: joPortrait,
+            };
+        }
         return {
             idle: joIdle,
             walk: joWalkFrames,
@@ -324,6 +425,18 @@ export function getCharacterTextures(type) {
             lyingDown: joLyingDown,
             getUp: joGetUp,
             portrait: joPortrait,
+        };
+    }
+    if (isBeach) {
+        return {
+            idle: emiBeachIdle,
+            walk: emiBeachWalkFrames,
+            jump: emiBeachJump,
+            crouch: emiBeachCrouch,
+            fall: emiBeachFall,
+            lyingDown: emiBeachLyingDown,
+            getUp: emiBeachGetUp,
+            portrait: emiPortrait,
         };
     }
     return {

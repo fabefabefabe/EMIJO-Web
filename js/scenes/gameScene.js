@@ -16,6 +16,7 @@ import { Parents } from '../entities/parents.js';
 import { Jogger } from '../entities/jogger.js';
 import { Skater } from '../entities/skater.js';
 import { HallOfFame } from '../systems/hallOfFame.js';
+import { Beagle } from '../entities/beagle.js';
 
 export class GameScene {
     constructor(game) {
@@ -38,7 +39,7 @@ export class GameScene {
         this.timeOfDay = getTimeOfDay(this.currentLevel);
 
         // Create player (pass level for speed multiplier)
-        this.player = new Player(charType, this.currentLevel);
+        this.player = new Player(charType, this.currentLevel, this.isBeach);
 
         // Create camera
         this.camera = new Camera();
@@ -74,9 +75,11 @@ export class GameScene {
         // Generate obstacles (use flag position + buffer as level width)
         const levelSpawnWidth = flagX + 1500;
         const obstacleData = generateObstacles(levelSpawnWidth, groundSurface, exclusionZones, this.isBeach);
-        this.obstacles = obstacleData.map(o =>
-            new Obstacle(o.type, o.x, o.groundSurface, charType)
-        );
+        this.obstacles = obstacleData.map(o => {
+            const obs = new Obstacle(o.type, o.x, o.groundSurface, charType);
+            obs.timeOfDay = this.timeOfDay;
+            return obs;
+        });
 
         // Birds
         this.birds = [];
@@ -128,9 +131,13 @@ export class GameScene {
         for (const marker of this.dogMarkers) {
             const treeObs = new Obstacle('tree', marker.x, groundSurface, charType);
             treeObs.isDogTree = true;
+            treeObs.timeOfDay = this.timeOfDay;
             this.obstacles.push(treeObs);
             marker.treeObstacle = treeObs;
         }
+
+        // Shift powerups away from trees
+        this._shiftPickupsAwayFromTrees();
 
         // Welcome signs - dynamic from CITY_DATA
         this.welcomeSigns = [];
@@ -139,8 +146,8 @@ export class GameScene {
         if (cityData) {
             this.welcomeSigns.push({
                 x: signX,
-                line1Tex: TC.renderText('BIENVENIDOS A'),
-                line2Tex: TC.renderText(cityData.name.toUpperCase()),
+                line1Tex: TC.renderTextBold('BIENVENIDOS A'),
+                line2Tex: TC.renderTextBold(cityData.name.toUpperCase()),
             });
         }
 
@@ -179,6 +186,12 @@ export class GameScene {
 
         // Parents next to the flag
         this.parents = new Parents(flagX + 80, groundSurface);
+
+        // Beagle companion (level 6+)
+        this.beagle = null;
+        if (this.currentLevel >= 6) {
+            this.beagle = new Beagle(this.player.x - 100, groundSurface);
+        }
 
         // Tutorial: only on level 1, first time playing
         this._tutorial = null;
@@ -229,6 +242,24 @@ export class GameScene {
     }
 
     /**
+     * Shift hearts and ammo pickups so they don't overlap with tree/umbrella obstacles.
+     */
+    _shiftPickupsAwayFromTrees() {
+        const treeObstacles = this.obstacles.filter(o =>
+            o.type === 'tree' || o.type === 'beachUmbrella'
+        );
+        const treeHalfWidth = 60; // approximate tree sprite half-width
+        for (const pickup of [...this.heartPickups, ...this.ammoPickups]) {
+            for (const tree of treeObstacles) {
+                if (Math.abs(pickup.x - tree.x) < treeHalfWidth) {
+                    pickup.x = tree.x + treeHalfWidth + 30;
+                    if (pickup.baseY !== undefined) pickup.baseY = pickup.y;
+                }
+            }
+        }
+    }
+
+    /**
      * Generate dog marker positions at every 100m
      */
     _generateDogMarkers() {
@@ -271,6 +302,9 @@ export class GameScene {
 
         // Handle end states
         if (this.isLevelComplete) {
+            // Keep flag animating during level complete
+            this.flag.update(dt);
+
             // Keep existing projectiles flying during level complete
             for (const proj of this.projectiles) {
                 proj.update(dt);
@@ -282,6 +316,7 @@ export class GameScene {
                 for (const obstacle of this.obstacles) {
                     if (obstacle.destroyed) continue;
                     if (obstacle.type === 'pothole') continue;
+                    if (obstacle.type === 'tree' || obstacle.type === 'beachUmbrella') continue;
                     if (obstacle.type === 'trashCan' && obstacle.knocked) continue;
                     if (aabbOverlap(proj.getAABB(), obstacle.getAABB())) {
                         obstacle.destroyed = true;
@@ -412,8 +447,8 @@ export class GameScene {
             this.game.toggleMusic();
         }
 
-        // Auto-shoot power-up: fire projectiles automatically when active
-        if (this.autoShootActive) {
+        // Auto-shoot power-up: fire projectiles automatically when active (not while in pothole)
+        if (this.autoShootActive && this.player.state !== 'fallingInHole') {
             this.autoShootTimer -= dt;
             this.autoShootCooldown -= dt;
             if (this.autoShootCooldown <= 0) {
@@ -564,16 +599,41 @@ export class GameScene {
         }
         this.projectiles = this.projectiles.filter(p => p.alive);
 
-        // Collision: projectiles vs obstacles
+        // Collision: projectiles vs obstacles (skip trees and potholes)
         for (const proj of this.projectiles) {
             for (const obstacle of this.obstacles) {
                 if (obstacle.destroyed) continue;
-                // Potholes can't be destroyed by projectiles
                 if (obstacle.type === 'pothole') continue;
-                // Knocked trash cans can't be destroyed either
+                if (obstacle.type === 'tree' || obstacle.type === 'beachUmbrella') continue;
                 if (obstacle.type === 'trashCan' && obstacle.knocked) continue;
                 if (aabbOverlap(proj.getAABB(), obstacle.getAABB())) {
                     obstacle.destroyed = true;
+                    proj.destroy();
+                    this.game.music.playDestroySound();
+                    break;
+                }
+            }
+        }
+        // Collision: projectiles vs joggers
+        for (const proj of this.projectiles) {
+            if (!proj.alive) continue;
+            for (const jogger of this.joggers) {
+                if (jogger.knocked) continue;
+                if (aabbOverlap(proj.getAABB(), jogger.getAABB())) {
+                    jogger.knockDown();
+                    proj.destroy();
+                    this.game.music.playDestroySound();
+                    break;
+                }
+            }
+        }
+        // Collision: projectiles vs skaters
+        for (const proj of this.projectiles) {
+            if (!proj.alive) continue;
+            for (const skater of this.skaters) {
+                if (skater.knocked) continue;
+                if (aabbOverlap(proj.getAABB(), skater.getAABB())) {
+                    skater.knockDown();
                     proj.destroy();
                     this.game.music.playDestroySound();
                     break;
@@ -628,18 +688,29 @@ export class GameScene {
         this.joggers = this.joggers.filter(j => j.alive && j.x > cullX);
         this.skaters = this.skaters.filter(s => s.alive && s.x > cullX);
 
-        // Spawn joggers/skaters (level 3+, alternating; no skaters on beach)
+        // Spawn joggers/skaters (level 3+, alternating; no skaters on beach; no jogger if tree visible)
         if (this.currentLevel >= Config.joggerMinLevel) {
             this.joggerSpawnTimer += dt;
             if (this.joggerSpawnTimer >= this.joggerNextSpawnAt) {
-                this.joggerSpawnTimer = 0;
-                this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
-                if (this.npcSpawnToggle && !this.isBeach) {
-                    this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
+                // Check if any tree/umbrella is visible on screen — if so, skip spawn
+                const treeOnScreen = this.obstacles.some(o =>
+                    (o.type === 'tree' || o.type === 'beachUmbrella') &&
+                    o.x > this.camera.offset - 100 &&
+                    o.x < this.camera.offset + Config.sceneWidth + 100
+                );
+                if (treeOnScreen) {
+                    // Don't spawn — keep timer just below threshold to retry next frame
+                    this.joggerSpawnTimer = this.joggerNextSpawnAt - 0.01;
                 } else {
-                    this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                    this.joggerSpawnTimer = 0;
+                    this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
+                    if (this.npcSpawnToggle && !this.isBeach) {
+                        this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
+                    } else {
+                        this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                    }
+                    this.npcSpawnToggle = !this.npcSpawnToggle;
                 }
-                this.npcSpawnToggle = !this.npcSpawnToggle;
             }
         }
 
@@ -654,6 +725,11 @@ export class GameScene {
             skater.update(dt);
         }
         this.skaters = this.skaters.filter(s => s.alive);
+
+        // Update beagle companion
+        if (this.beagle) {
+            this.beagle.update(dt, this.player.x, this.joggers, this.skaters);
+        }
 
         // Collision: player vs obstacles (type-specific)
         const playerAABB = this.player.getAABB();
@@ -770,16 +846,16 @@ export class GameScene {
         // Draw light poles (decorative, between parallax and obstacles)
         this._drawLightPoles(ctx, camX);
 
-        // Draw dogs at every 100m marker
-        this._drawDogMarkers(ctx, camX);
-
-        // Draw welcome signs (behind obstacles, after dogs)
+        // Draw welcome signs (behind obstacles)
         this._drawWelcomeSigns(ctx, camX);
 
         // Draw obstacles
         for (const obstacle of this.obstacles) {
             obstacle.draw(ctx, camX);
         }
+
+        // Draw dogs at every 100m marker (AFTER obstacles so dog appears in front of tree)
+        this._drawDogMarkers(ctx, camX);
 
         // Draw joggers
         for (const jogger of this.joggers) {
@@ -806,6 +882,11 @@ export class GameScene {
         // Draw birds (behind player)
         for (const bird of this.birds) {
             bird.draw(ctx, camX);
+        }
+
+        // Draw beagle companion
+        if (this.beagle) {
+            this.beagle.draw(ctx, camX);
         }
 
         // Draw player
@@ -911,7 +992,7 @@ export class GameScene {
         // Draw auto-shoot countdown (below music icon, top-right) — only when active
         if (this.autoShootActive) {
             const charType = this.game.state.selectedCharacter || 'emi';
-            const ammoFrames = charType === 'jo' ? TC.hockeyStickFrames : TC.soccerBallFrames;
+            const ammoFrames = charType === 'jo' ? TC.arrowFrames : TC.soccerBallFrames;
             const ammoIcon = ammoFrames[0];
             const ammoIconScale = scale * 0.8;
             const ammoIconW = ammoIcon.width * ammoIconScale;
@@ -1224,25 +1305,47 @@ export class GameScene {
             const signScreenX = screenX - signW / 2;
             const signScreenY = Config.sceneHeight - sidewalkH - signH + postSink;
 
+            // Night spotlight glow above sign
+            if (this.timeOfDay === 'night') {
+                const glowX = signScreenX + signW / 2;
+                const glowY = signScreenY - 5;
+                const glowR = 90;
+                ctx.save();
+                const glow = ctx.createRadialGradient(glowX, glowY, 5, glowX, glowY + 20, glowR);
+                glow.addColorStop(0, 'rgba(255, 240, 200, 0.30)');
+                glow.addColorStop(0.4, 'rgba(255, 220, 160, 0.12)');
+                glow.addColorStop(1, 'rgba(255, 200, 120, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(glowX, glowY + 20, glowR, 0, Math.PI * 2);
+                ctx.fill();
+                // Light source indicator (small bright spot)
+                ctx.fillStyle = 'rgba(255, 250, 220, 0.6)';
+                ctx.beginPath();
+                ctx.arc(glowX, glowY, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
             ctx.drawImage(TC.welcomeSign, signScreenX, signScreenY, signW, signH);
 
             // Green board area is top 16 rows of 32 total (50%)
             const boardH = signH * (16 / 32);
-            const textScale = scale * 0.45;
+            const textScale = scale * 0.6;
 
-            // Line 1: centered in upper third of board
+            // Line 1: centered in upper third of board (bold)
             const line1W = sign.line1Tex.width * textScale;
             const line1H = sign.line1Tex.height * textScale;
             const line1X = signScreenX + signW / 2 - line1W / 2;
-            const line1Y = signScreenY + boardH * 0.2;
+            const line1Y = signScreenY + boardH * 0.15;
 
             ctx.drawImage(sign.line1Tex, line1X, line1Y, line1W, line1H);
 
-            // Line 2: centered in lower third of board
+            // Line 2: centered in lower third of board (bold)
             const line2W = sign.line2Tex.width * textScale;
             const line2H = sign.line2Tex.height * textScale;
             const line2X = signScreenX + signW / 2 - line2W / 2;
-            const line2Y = signScreenY + boardH * 0.55;
+            const line2Y = signScreenY + boardH * 0.52;
 
             ctx.drawImage(sign.line2Tex, line2X, line2Y, line2W, line2H);
         }

@@ -1,4 +1,4 @@
-// Flag Entity - end of level marker
+// Flag Entity - end of level marker with animated cloth
 import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 
@@ -14,9 +14,14 @@ export class Flag {
         const spriteH = this.texture.height * scale;
         this.y = groundSurface + spriteH / 2;
 
-        // Subtle wave animation
+        // Subtle wave animation (pole sway)
         this.waveAngle = 0;
         this.waveDir = 1;
+
+        // Cloth flutter animation (cycle through 3 frames at ~4fps)
+        this.clothFrame = 0;
+        this.clothTimer = 0;
+        this.clothCycle = [0, 1, 0, 2]; // default, compact, default, extended
     }
 
     /**
@@ -33,16 +38,25 @@ export class Flag {
     }
 
     update(dt) {
-        // Subtle rotation wave
-        this.waveAngle += this.waveDir * dt * 0.0625; // ~0.05 rad per 0.8s
-        if (this.waveAngle > 0.05) this.waveDir = -1;
-        if (this.waveAngle < -0.05) this.waveDir = 1;
+        // Pole sway with wider amplitude
+        this.waveAngle += this.waveDir * dt * 0.1;
+        if (this.waveAngle > 0.08) this.waveDir = -1;
+        if (this.waveAngle < -0.08) this.waveDir = 1;
+
+        // Cloth flutter at ~4fps
+        this.clothTimer += dt;
+        if (this.clothTimer >= 0.25) {
+            this.clothTimer -= 0.25;
+            this.clothFrame = (this.clothFrame + 1) % this.clothCycle.length;
+        }
     }
 
     draw(ctx, cameraX) {
         const scale = Config.pixelScale;
-        const w = this.texture.width * scale;
-        const h = this.texture.height * scale;
+        const frameIdx = this.clothCycle[this.clothFrame];
+        const texture = TC.flagFrames[frameIdx];
+        const w = texture.width * scale;
+        const h = texture.height * scale;
         const screenX = this.x - cameraX - w / 2;
 
         // Position sprite so bottom is on top of sidewalk
@@ -52,13 +66,13 @@ export class Flag {
         ctx.save();
         ctx.imageSmoothingEnabled = false;
 
-        // Apply subtle rotation
+        // Apply subtle rotation (pole sway)
         if (Math.abs(this.waveAngle) > 0.001) {
             ctx.translate(screenX + w / 2, screenY + h);
             ctx.rotate(this.waveAngle);
-            ctx.drawImage(this.texture, -w / 2, -h, w, h);
+            ctx.drawImage(texture, -w / 2, -h, w, h);
         } else {
-            ctx.drawImage(this.texture, screenX, screenY, w, h);
+            ctx.drawImage(texture, screenX, screenY, w, h);
         }
 
         ctx.restore();

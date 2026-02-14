@@ -37,8 +37,8 @@ export const Config = {
     birdSpawnInterval: 3.0,
     birdMinY: 280,    // altura original
     birdMaxY: 420,    // altura original
-    birdMinDuration: 10.0,   // más lento
-    birdMaxDuration: 18.0,   // más lento
+    birdMinDuration: 30.0,   // 1/3 speed (tripled duration)
+    birdMaxDuration: 54.0,   // 1/3 speed (tripled duration)
 
     // Heart pickups - más frecuentes
     heartSpawnChance: 0.50,     // 50% chance cada intervalo
@@ -53,7 +53,8 @@ export const Config = {
 
     // Jogger / Skater NPC (from level 3+, alternating)
     joggerBaseSpawnInterval: 12.0,  // average seconds between NPC spawns (less frequent)
-    joggerSpeed: 150,               // px/s (jogger & skater both move left, slower)
+    joggerSpeed: 85,                // px/s (jogger moves left, slower)
+    skaterSpeed: 150,               // px/s (skater moves left, faster)
     joggerMinLevel: 3,              // first level joggers appear
 
     // Ammo (auto-shoot power-up)

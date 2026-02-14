@@ -1,4 +1,4 @@
-// Menu Scene - character selection (Emi or Jo)
+// Menu Scene - character selection (Emi or Jo) with animated portraits
 import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 import { ParallaxSystem } from '../systems/parallax.js';
@@ -18,18 +18,22 @@ export class MenuScene {
         this.instructionDir = -1;
         this.flashTimer = -1; // -1 = not flashing
         this.flashCount = 0;
-        this.musicStarted = false; // Track if menu music has started
+        this.musicStarted = false;
 
-        // Character walk animation at 12fps
-        this.walkFrame = 0;
-        this.walkTimer = 0;
-        this.walkFrameInterval = 1 / 12; // 12fps
+        // Portrait blink animation
+        // Frames: 0=open, 1=blink, 2=look
+        // Mostly open, occasional blink, occasional look
+        this.emiPortraitFrame = 0;
+        this.emiBlinkTimer = 2 + Math.random() * 3; // 2-5s until first blink
+        this.emiLookTimer = 5 + Math.random() * 5; // 5-10s until first look
+        this.emiAnimTimer = 0;
+        this.emiAnimState = 'open'; // 'open', 'blinking', 'looking'
 
-        // Character animation - looking left/right randomly
-        this.emiLookTimer = Math.random() * 2;
-        this.emiLookDir = 0; // -1=left, 0=center, 1=right
-        this.joLookTimer = Math.random() * 2;
-        this.joLookDir = 0;
+        this.joPortraitFrame = 0;
+        this.joBlinkTimer = 3 + Math.random() * 3;
+        this.joLookTimer = 6 + Math.random() * 5;
+        this.joAnimTimer = 0;
+        this.joAnimState = 'open';
 
         // Background birds
         this.menuBirds = [];
@@ -44,7 +48,7 @@ export class MenuScene {
 
         // Update background birds
         this.birdSpawnTimer += dt;
-        if (this.birdSpawnTimer >= 4.5) { // Spawn bird every 4.5 seconds
+        if (this.birdSpawnTimer >= 4.5) {
             this.birdSpawnTimer = 0;
             this.menuBirds.push(Bird.spawnRandom(0));
         }
@@ -53,25 +57,9 @@ export class MenuScene {
         }
         this.menuBirds = this.menuBirds.filter(b => b.alive);
 
-        // Walk animation (12fps cycle through 6 frames)
-        this.walkTimer += dt;
-        if (this.walkTimer >= this.walkFrameInterval) {
-            this.walkTimer -= this.walkFrameInterval;
-            this.walkFrame = (this.walkFrame + 1) % 6;
-        }
-
-        // Animate character looking directions
-        this.emiLookTimer += dt;
-        if (this.emiLookTimer >= 2 + Math.random() * 2) {
-            this.emiLookTimer = 0;
-            this.emiLookDir = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
-        }
-
-        this.joLookTimer += dt;
-        if (this.joLookTimer >= 2 + Math.random() * 2) {
-            this.joLookTimer = 0;
-            this.joLookDir = Math.floor(Math.random() * 3) - 1;
-        }
+        // Animate Emi portrait
+        this._updatePortraitAnim(dt, 'emi');
+        this._updatePortraitAnim(dt, 'jo');
 
         // Selection indicator blink
         this.blinkTimer += dt;
@@ -110,9 +98,85 @@ export class MenuScene {
             this.game.toggleMusic();
         }
         if (input.consumeKey('Enter') || input.consumeKey('Space')) {
-            // Switch from menu music to game music when confirming selection
             this.game.music.playTrack('game');
             this._confirmSelection();
+        }
+    }
+
+    _updatePortraitAnim(dt, who) {
+        const isEmi = who === 'emi';
+        const state = isEmi ? this.emiAnimState : this.joAnimState;
+        let blinkTimer = isEmi ? this.emiBlinkTimer : this.joBlinkTimer;
+        let lookTimer = isEmi ? this.emiLookTimer : this.joLookTimer;
+        let animTimer = isEmi ? this.emiAnimTimer : this.joAnimTimer;
+
+        if (state === 'open') {
+            // Count down to next blink or look
+            blinkTimer -= dt;
+            lookTimer -= dt;
+
+            if (blinkTimer <= 0) {
+                // Start blink
+                if (isEmi) {
+                    this.emiAnimState = 'blinking';
+                    this.emiAnimTimer = 0;
+                    this.emiPortraitFrame = 1; // blink frame
+                    this.emiBlinkTimer = 2 + Math.random() * 4;
+                } else {
+                    this.joAnimState = 'blinking';
+                    this.joAnimTimer = 0;
+                    this.joPortraitFrame = 1;
+                    this.joBlinkTimer = 2 + Math.random() * 4;
+                }
+            } else if (lookTimer <= 0) {
+                // Start look
+                if (isEmi) {
+                    this.emiAnimState = 'looking';
+                    this.emiAnimTimer = 0;
+                    this.emiPortraitFrame = 2; // look frame
+                    this.emiLookTimer = 5 + Math.random() * 5;
+                } else {
+                    this.joAnimState = 'looking';
+                    this.joAnimTimer = 0;
+                    this.joPortraitFrame = 2;
+                    this.joLookTimer = 5 + Math.random() * 5;
+                }
+            } else {
+                // Still open
+                if (isEmi) {
+                    this.emiBlinkTimer = blinkTimer;
+                    this.emiLookTimer = lookTimer;
+                } else {
+                    this.joBlinkTimer = blinkTimer;
+                    this.joLookTimer = lookTimer;
+                }
+            }
+        } else if (state === 'blinking') {
+            animTimer += dt;
+            if (isEmi) { this.emiAnimTimer = animTimer; } else { this.joAnimTimer = animTimer; }
+            // Blink lasts 0.15s
+            if (animTimer >= 0.15) {
+                if (isEmi) {
+                    this.emiAnimState = 'open';
+                    this.emiPortraitFrame = 0;
+                } else {
+                    this.joAnimState = 'open';
+                    this.joPortraitFrame = 0;
+                }
+            }
+        } else if (state === 'looking') {
+            animTimer += dt;
+            if (isEmi) { this.emiAnimTimer = animTimer; } else { this.joAnimTimer = animTimer; }
+            // Look lasts 1.0s
+            if (animTimer >= 1.0) {
+                if (isEmi) {
+                    this.emiAnimState = 'open';
+                    this.emiPortraitFrame = 0;
+                } else {
+                    this.joAnimState = 'open';
+                    this.joPortraitFrame = 0;
+                }
+            }
         }
     }
 
@@ -138,26 +202,26 @@ export class MenuScene {
         const lw = TC.logo.width * logoScale;
         const lh = TC.logo.height * logoScale;
         const lx = (W - lw) / 2;
-        const ly = H * 0.25 - lh / 2; // canvas Y-down: 25% from top = 75% from bottom
+        const ly = H * 0.25 - lh / 2;
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(TC.logo, lx, ly, lw, lh);
 
-        // Character selection area
-        const centerY = H * 0.55; // canvas coords
-        const spacing = 140; // increased for larger portraits
+        // Character selection area - big animated portraits
+        const centerY = H * 0.55;
+        const spacing = 140;
 
-        // Portrait scales adjusted for pixelScale 3 (doubled for visibility)
-        const selectedScale = scale * 1.0;
-        const unselectedScale = scale * 0.8;
+        // Portrait scales (bigger than walk frames)
+        const selectedScale = scale * 1.8;
+        const unselectedScale = scale * 1.4;
 
-        // Get walk frame textures
-        const emiWalkTex = TC.emiWalkFrames[this.walkFrame];
-        const joWalkTex = TC.joWalkFrames[this.walkFrame];
+        // Get portrait frame textures
+        const emiTex = TC.emiPortraitFrames[this.emiPortraitFrame];
+        const joTex = TC.joPortraitFrames[this.joPortraitFrame];
 
-        // Emi character (walk animation)
+        // Emi portrait
         const emiScale = this.selectedIndex === 0 ? selectedScale : unselectedScale;
-        const emiW = emiWalkTex.width * emiScale;
-        const emiH = emiWalkTex.height * emiScale;
+        const emiW = emiTex.width * emiScale;
+        const emiH = emiTex.height * emiScale;
         const emiX = W / 2 - spacing - emiW / 2;
         const emiY = centerY - emiH / 2;
 
@@ -170,24 +234,17 @@ export class MenuScene {
             ctx.restore();
         }
 
-        // Draw Emi walk frame (handle flash and look animation)
+        // Draw Emi portrait (handle flash)
         const emiAlpha = this._getPortraitAlpha(0);
         ctx.save();
         ctx.globalAlpha = emiAlpha;
-        const emiOffsetX = this.emiLookDir * 3;
-        if (this.emiLookDir === -1) {
-            ctx.translate(emiX + emiW + emiOffsetX, emiY);
-            ctx.scale(-1, 1);
-            ctx.drawImage(emiWalkTex, 0, 0, emiW, emiH);
-        } else {
-            ctx.drawImage(emiWalkTex, emiX + emiOffsetX, emiY, emiW, emiH);
-        }
+        ctx.drawImage(emiTex, emiX, emiY, emiW, emiH);
         ctx.restore();
 
-        // Jo character (walk animation)
+        // Jo portrait
         const joScale = this.selectedIndex === 1 ? selectedScale : unselectedScale;
-        const joW = joWalkTex.width * joScale;
-        const joH = joWalkTex.height * joScale;
+        const joW = joTex.width * joScale;
+        const joH = joTex.height * joScale;
         const joX = W / 2 + spacing - joW / 2;
         const joY = centerY - joH / 2;
 
@@ -199,21 +256,14 @@ export class MenuScene {
             ctx.restore();
         }
 
-        // Draw Jo walk frame (handle flash and look animation)
+        // Draw Jo portrait (handle flash)
         const joAlpha = this._getPortraitAlpha(1);
         ctx.save();
         ctx.globalAlpha = joAlpha;
-        const joOffsetX = this.joLookDir * 3;
-        if (this.joLookDir === 1) {
-            ctx.translate(joX + joW + joOffsetX, joY);
-            ctx.scale(-1, 1);
-            ctx.drawImage(joWalkTex, 0, 0, joW, joH);
-        } else {
-            ctx.drawImage(joWalkTex, joX + joOffsetX, joY, joW, joH);
-        }
+        ctx.drawImage(joTex, joX, joY, joW, joH);
         ctx.restore();
 
-        // Name labels (same size as instruction text)
+        // Name labels
         const emiLabel = TC.renderText('EMI');
         const joLabel = TC.renderText('JO');
         const labelScale = scale * 0.8;
@@ -280,12 +330,10 @@ export class MenuScene {
 
         if (this._emiBounds && this._hitTest(x, y, this._emiBounds)) {
             this.selectedIndex = 0;
-            // Switch to game music when selecting character
             this.game.music.playTrack('game');
             this._confirmSelection();
         } else if (this._joBounds && this._hitTest(x, y, this._joBounds)) {
             this.selectedIndex = 1;
-            // Switch to game music when selecting character
             this.game.music.playTrack('game');
             this._confirmSelection();
         }

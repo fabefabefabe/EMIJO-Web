@@ -13,9 +13,9 @@ const STATES = {
 };
 
 export class Player {
-    constructor(characterType, level = 1) {
+    constructor(characterType, level = 1, isBeach = false) {
         this.characterType = characterType;
-        this.textures = getCharacterTextures(characterType);
+        this.textures = getCharacterTextures(characterType, isBeach);
 
         // Position (game coords, Y-up)
         this.x = Config.startBuffer / 2;

@@ -101,7 +101,7 @@ export class Obstacle {
 
         if (type === 'pothole') {
             // Pothole is embedded deeper in ground
-            this.y = groundSurface + 18;
+            this.y = groundSurface + 21;
         } else if (type === 'tree') {
             // Tree sprite bottom on ground, AABB at canopy
             this.y = groundSurface + spriteH / 2;
@@ -194,10 +194,10 @@ export class Obstacle {
             this.leaves.push({
                 x: this.x + (Math.random() - 0.5) * 100,
                 screenY: 0, // will be set relative to canopy top
-                vy: 40 + Math.random() * 80,     // fall speed (screen pixels/s) - doubled
-                vx: (Math.random() - 0.5) * 60,  // horizontal drift - doubled
+                vy: 120 + Math.random() * 240,    // fall speed (screen pixels/s) - 3x
+                vx: (Math.random() - 0.5) * 180,  // horizontal drift - 3x
                 rotation: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 8, // doubled
+                rotSpeed: (Math.random() - 0.5) * 24, // 3x
                 alpha: 1.0,
                 startDelay: Math.random() * 0.3,  // stagger leaf drops
                 grounded: false,
@@ -366,10 +366,25 @@ export class Obstacle {
 
         // Pothole: sink deeper into ground
         if (this.type === 'pothole') {
-            screenY = Config.sceneHeight - sidewalkH - h + 18;
+            screenY = Config.sceneHeight - sidewalkH - h + 21;
         }
 
         ctx.imageSmoothingEnabled = false;
+
+        // Shadow (day only, not for potholes)
+        if (this.timeOfDay === 'day' && this.type !== 'pothole') {
+            const shadowW = w * 0.85;
+            const shadowH = Math.max(4, w * 0.15);
+            const shadowX = screenX + w / 2 - shadowW / 2 + 3;
+            const shadowY = screenY + h - shadowH * 0.3;
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(shadowX + shadowW / 2, shadowY, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
 
         // Tree / umbrella: shake effect (oscillate X)
         if ((this.type === 'tree' || this.type === 'beachUmbrella') && this.shaking) {
@@ -416,7 +431,7 @@ export class Obstacle {
         const holeW = holeTex.width * scale;
         const holeH = holeTex.height * scale;
         const holeScreenX = this.x - cameraX - holeW / 2;
-        const holeScreenY = Config.sceneHeight - sidewalkH - holeH + 18;
+        const holeScreenY = Config.sceneHeight - sidewalkH - holeH + 21;
 
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(holeTex, holeScreenX, holeScreenY, holeW, holeH);

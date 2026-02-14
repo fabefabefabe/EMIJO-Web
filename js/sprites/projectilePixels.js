@@ -41,38 +41,38 @@ export const soccerBall3 = [
     [0,0,1,1,1,1,0,0],
 ];
 
-// Hockey stick palette
-export const hockeyPalette = [
-    [0, 0, 0, 0],       // 0: transparent
-    [180, 140, 100, 255], // 1: wood light
-    [140, 100, 60, 255], // 2: wood dark
-    [60, 60, 60, 255],  // 3: tape/grip
+// Arrow palette (purple)
+export const arrowPalette = [
+    [0, 0, 0, 0],          // 0: transparent
+    [160, 80, 200, 255],    // 1: purple main
+    [120, 50, 160, 255],    // 2: purple dark (shaft)
+    [200, 130, 240, 255],   // 3: purple light (arrowhead tip)
 ];
 
-// Hockey stick 12x6 - horizontal, blade on right
-export const hockeyStick1 = [
-    [0,0,0,0,0,0,0,0,0,0,0,0],
-    [3,3,1,1,1,1,1,1,1,2,0,0],
-    [3,3,1,1,1,1,1,1,1,2,2,0],
-    [0,0,2,2,2,2,2,2,2,2,2,2],
-    [0,0,0,0,0,0,0,0,0,2,2,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0],
+// Arrow 10x4 - horizontal, pointing right, 3 animation frames
+export const arrow1 = [
+    [0,0,0,0,0,0,0,3,0,0],
+    [2,2,1,1,1,1,3,3,3,0],
+    [2,2,1,1,1,1,3,3,3,0],
+    [0,0,0,0,0,0,0,3,0,0],
 ];
 
-export const hockeyStick2 = [
-    [0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,3,3,1,1,1,1,1,1,2,0,0],
-    [0,3,3,1,1,1,1,1,1,2,2,0],
-    [0,0,0,2,2,2,2,2,2,2,2,2],
-    [0,0,0,0,0,0,0,0,0,0,2,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0],
+export const arrow2 = [
+    [0,0,0,0,0,0,0,0,3,0],
+    [0,2,2,1,1,1,1,3,3,3],
+    [0,2,2,1,1,1,1,3,3,3],
+    [0,0,0,0,0,0,0,0,3,0],
 ];
 
-export const hockeyStick3 = [
-    [0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,3,3,1,1,1,1,1,2,0,0],
-    [0,0,3,3,1,1,1,1,1,2,2,0],
-    [0,0,0,0,2,2,2,2,2,2,2,2],
-    [0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0],
+export const arrow3 = [
+    [0,0,0,0,0,0,3,0,0,0],
+    [2,1,1,1,1,3,3,3,0,0],
+    [2,1,1,1,1,3,3,3,0,0],
+    [0,0,0,0,0,0,3,0,0,0],
 ];
+
+// Backwards compatibility aliases
+export const hockeyPalette = arrowPalette;
+export const hockeyStick1 = arrow1;
+export const hockeyStick2 = arrow2;
+export const hockeyStick3 = arrow3;
