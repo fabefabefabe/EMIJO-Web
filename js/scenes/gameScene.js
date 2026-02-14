@@ -119,10 +119,6 @@ export class GameScene {
         this.dogAnimTimer = 0;
         this.dogFrame = 0; // 0=left, 1=right
 
-        // HUD heart shine animation
-        this.heartShineTimer = 0;
-        this.heartShineIndex = 0;
-
         // Welcome signs at specific levels - 2 lines, near start
         this.welcomeSigns = [];
         const signX = 20 / Config.metersPerPixel; // 20m from start
@@ -311,12 +307,7 @@ export class GameScene {
             this.dogFrame = 1 - this.dogFrame; // Toggle 0/1
         }
 
-        // HUD heart shine animation
-        this.heartShineTimer += dt;
-        if (this.heartShineTimer >= 0.8) { // Shine next heart every 0.8 seconds
-            this.heartShineTimer -= 0.8;
-            this.heartShineIndex = (this.heartShineIndex + 1) % Config.maxEnergy;
-        }
+
 
         // Track previous state for jump sound
         const wasOnGround = this.player.isOnGround;
@@ -572,19 +563,6 @@ export class GameScene {
             if (i < currentHearts) {
                 // Full heart (red)
                 ctx.drawImage(TC.heartFullTex, x, y, heartW, heartH);
-
-                // Add shine effect on current shine index
-                if (i === this.heartShineIndex && i < currentHearts) {
-                    // Draw a white shine overlay
-                    ctx.save();
-                    ctx.globalAlpha = 0.4 + Math.sin(this.heartShineTimer * 10) * 0.3;
-                    ctx.globalCompositeOperation = 'lighter';
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath();
-                    ctx.arc(x + heartW * 0.35, y + heartH * 0.35, heartW * 0.2, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
             } else {
                 // Empty heart (gray)
                 ctx.drawImage(TC.heartEmptyTex, x, y, heartW, heartH);
@@ -600,8 +578,9 @@ export class GameScene {
 
         ctx.drawImage(levelText, margin, levelY, levelW, levelH);
 
-        // Draw meters below level
-        const metersText = TC.renderText(this.metersWalked + '/' + this.flagDistanceMeters + 'M');
+        // Draw meters below level (padded to 3 digits)
+        const paddedMeters = String(this.metersWalked).padStart(3, '0');
+        const metersText = TC.renderText(paddedMeters + 'M/' + this.flagDistanceMeters + 'M');
         const metersScale = scale * 0.7;
         const metersW = metersText.width * metersScale;
         const metersH = metersText.height * metersScale;

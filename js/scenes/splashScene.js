@@ -80,6 +80,25 @@ export class SplashScene {
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(promptText, px, py, pw, ph);
             ctx.restore();
+
+            // Year and credits
+            ctx.save();
+            ctx.globalAlpha = 0.6;
+            ctx.imageSmoothingEnabled = false;
+
+            const creditScale = Config.pixelScale * 0.5;
+
+            const yearText = TC.renderText('2025');
+            const yw = yearText.width * creditScale;
+            const yh = yearText.height * creditScale;
+            ctx.drawImage(yearText, (W - yw) / 2, H * 0.83, yw, yh);
+
+            const creditText = TC.renderText('CREADO CON CLAUDE ANTHROPIC OPUS 4.6');
+            const cw = creditText.width * creditScale;
+            const ch = creditText.height * creditScale;
+            ctx.drawImage(creditText, (W - cw) / 2, H * 0.89, cw, ch);
+
+            ctx.restore();
         }
     }
 
