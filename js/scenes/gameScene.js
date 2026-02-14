@@ -159,6 +159,24 @@ export class GameScene {
 
         // Parents next to the flag
         this.parents = new Parents(flagX + 80, groundSurface);
+
+        // Tutorial: only on level 1, first time playing
+        this._tutorial = null;
+        if (this.currentLevel === 1 && !localStorage.getItem('emijo_tutorial_seen')) {
+            this._tutorial = {
+                phase: 0,           // 0=intro, 1=jump, 2=done
+                alpha: 0,
+                fadeIn: true,
+                timer: 0,
+                firstObstacleX: this.obstacles.length > 0 ? this.obstacles[0].x : 2000,
+                line1: TC.renderText('ESTAS PERDIDO EN LA COSTA'),
+                line2: TC.renderText('DE URUGUAY!'),
+                line3: TC.renderText('LLEGA AL FINAL Y'),
+                line4: TC.renderText('REENCUENTRATE CON TUS PADRES'),
+                walkText: TC.renderText('CAMINA HACIA ADELANTE'),
+                jumpText: TC.renderText('SALTA EL OBSTACULO!'),
+            };
+        }
     }
 
     /**
@@ -354,6 +372,44 @@ export class GameScene {
 
         // Update camera
         this.camera.update(this.player.x);
+
+        // Tutorial state machine
+        if (this._tutorial && this._tutorial.phase < 2) {
+            const tut = this._tutorial;
+            tut.timer += dt;
+
+            if (tut.phase === 0) {
+                // Phase 0: Intro text — fade in, then fade out when player walks
+                if (tut.fadeIn) {
+                    tut.alpha = Math.min(1, tut.alpha + dt * 2);
+                }
+                if (this.player.x > 200) {
+                    tut.fadeIn = false;
+                    tut.alpha = Math.max(0, tut.alpha - dt * 2);
+                    if (tut.alpha <= 0) {
+                        tut.phase = 1;
+                        tut.alpha = 0;
+                        tut.fadeIn = true;
+                    }
+                }
+            } else if (tut.phase === 1) {
+                // Phase 1: Jump hint — fade in near first obstacle
+                const dist = tut.firstObstacleX - this.player.x;
+                if (dist < 350 && dist > -100) {
+                    if (tut.fadeIn) {
+                        tut.alpha = Math.min(1, tut.alpha + dt * 2);
+                    }
+                }
+                if (this.player.x > tut.firstObstacleX + 100) {
+                    tut.fadeIn = false;
+                    tut.alpha = Math.max(0, tut.alpha - dt * 2);
+                    if (tut.alpha <= 0) {
+                        tut.phase = 2;
+                        try { localStorage.setItem('emijo_tutorial_seen', '1'); } catch (e) {}
+                    }
+                }
+            }
+        }
 
         // Update parallax (sea animation)
         this.parallax.update(dt);
@@ -570,6 +626,11 @@ export class GameScene {
         // Draw HUD
         this._drawHUD(ctx);
 
+        // Draw tutorial overlay
+        if (this._tutorial && this._tutorial.phase < 2 && this._tutorial.alpha > 0) {
+            this._drawTutorial(ctx, camX);
+        }
+
         // Draw Game Over text
         if (this.isGameOver) {
             this._drawGameOver(ctx);
@@ -693,6 +754,127 @@ export class GameScene {
         ctx.fillStyle = 'rgba(200, 50, 50, 0.7)';
         ctx.fillRect((W - goW) / 2, H * 0.4 - goH / 2, goW, goH);
         ctx.globalCompositeOperation = 'source-over';
+
+        ctx.restore();
+    }
+
+    _drawTutorial(ctx, camX) {
+        const tut = this._tutorial;
+        const W = Config.sceneWidth;
+        const H = Config.sceneHeight;
+        const scale = Config.pixelScale;
+        const bob = Math.sin(tut.timer * 2.5) * 5; // gentle floating
+
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+
+        if (tut.phase === 0) {
+            // --- Phase 0: Intro message + right arrow ---
+            const baseAlpha = tut.alpha * 0.85;
+
+            // Semi-transparent dark backdrop behind text
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            const backdropY = H * 0.15;
+            const backdropH = H * 0.38;
+            ctx.globalAlpha = tut.alpha * 0.6;
+            ctx.beginPath();
+            const bx = W * 0.2, bw = W * 0.6;
+            const br = 12;
+            ctx.moveTo(bx + br, backdropY);
+            ctx.lineTo(bx + bw - br, backdropY);
+            ctx.quadraticCurveTo(bx + bw, backdropY, bx + bw, backdropY + br);
+            ctx.lineTo(bx + bw, backdropY + backdropH - br);
+            ctx.quadraticCurveTo(bx + bw, backdropY + backdropH, bx + bw - br, backdropY + backdropH);
+            ctx.lineTo(bx + br, backdropY + backdropH);
+            ctx.quadraticCurveTo(bx, backdropY + backdropH, bx, backdropY + backdropH - br);
+            ctx.lineTo(bx, backdropY + br);
+            ctx.quadraticCurveTo(bx, backdropY, bx + br, backdropY);
+            ctx.fill();
+
+            // Draw the 4 lines of text centered
+            ctx.globalAlpha = baseAlpha;
+            const textScale = scale * 0.8;
+            const lineSpacing = 28;
+            const lines = [tut.line1, tut.line2, tut.line3, tut.line4];
+            const startY = H * 0.2 + bob;
+
+            for (let i = 0; i < lines.length; i++) {
+                const tex = lines[i];
+                const tw = tex.width * textScale;
+                const th = tex.height * textScale;
+                ctx.drawImage(tex, (W - tw) / 2, startY + i * lineSpacing, tw, th);
+            }
+
+            // Right arrow with glow (floating, to the right of player)
+            const arrowPulse = 0.7 + Math.sin(tut.timer * 4) * 0.3;
+            ctx.globalAlpha = baseAlpha * arrowPulse;
+            const arrowX = W * 0.5;
+            const arrowY = H * 0.58 + bob;
+
+            // Arrow glow
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#ffffff';
+
+            // Arrow triangle pointing right
+            ctx.beginPath();
+            ctx.moveTo(arrowX + 30, arrowY);
+            ctx.lineTo(arrowX - 10, arrowY - 18);
+            ctx.lineTo(arrowX - 10, arrowY + 18);
+            ctx.closePath();
+            ctx.fill();
+
+            // Arrow tail (rectangle)
+            ctx.fillRect(arrowX - 30, arrowY - 8, 24, 16);
+
+            ctx.shadowBlur = 0;
+
+            // "CAMINA HACIA ADELANTE" text below arrow
+            ctx.globalAlpha = baseAlpha * 0.9;
+            const walkScale = scale * 0.6;
+            const walkW = tut.walkText.width * walkScale;
+            const walkH = tut.walkText.height * walkScale;
+            ctx.drawImage(tut.walkText, (W - walkW) / 2, arrowY + 30, walkW, walkH);
+
+        } else if (tut.phase === 1) {
+            // --- Phase 1: Jump hint above first obstacle ---
+            const obstScreenX = tut.firstObstacleX - camX;
+
+            // Only draw if obstacle is on screen
+            if (obstScreenX > -50 && obstScreenX < W + 50) {
+                const baseAlpha = tut.alpha * 0.9;
+                const arrowPulse = 0.7 + Math.sin(tut.timer * 4) * 0.3;
+
+                // Up arrow above obstacle with glow
+                const arrowX = obstScreenX;
+                const arrowY = H * 0.42 + bob;
+
+                ctx.globalAlpha = baseAlpha * arrowPulse;
+                ctx.shadowColor = '#ffdd44';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#ffdd44';
+
+                // Arrow triangle pointing up
+                ctx.beginPath();
+                ctx.moveTo(arrowX, arrowY - 20);
+                ctx.lineTo(arrowX - 18, arrowY + 10);
+                ctx.lineTo(arrowX + 18, arrowY + 10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Arrow stem
+                ctx.fillRect(arrowX - 6, arrowY + 8, 12, 20);
+
+                ctx.shadowBlur = 0;
+
+                // "SALTA EL OBSTACULO!" text above arrow
+                ctx.globalAlpha = baseAlpha;
+                const jumpScale = scale * 0.7;
+                const jumpW = tut.jumpText.width * jumpScale;
+                const jumpH = tut.jumpText.height * jumpScale;
+                ctx.drawImage(tut.jumpText, arrowX - jumpW / 2, arrowY - 45, jumpW, jumpH);
+            }
+        }
 
         ctx.restore();
     }
