@@ -168,6 +168,7 @@ export class GameScene {
                 alpha: 0,
                 fadeIn: true,
                 timer: 0,
+                startX: this.player ? this.player.x : 450, // remember starting position
                 firstObstacleX: this.obstacles.length > 0 ? this.obstacles[0].x : 2000,
                 line1: TC.renderText('ESTAS PERDIDO EN LA COSTA'),
                 line2: TC.renderText('DE URUGUAY!'),
@@ -380,10 +381,12 @@ export class GameScene {
 
             if (tut.phase === 0) {
                 // Phase 0: Intro text — fade in, then fade out when player walks
+                const distMoved = this.player.x - tut.startX;
                 if (tut.fadeIn) {
                     tut.alpha = Math.min(1, tut.alpha + dt * 2);
                 }
-                if (this.player.x > 200) {
+                // Player has walked ~150px from start → fade out
+                if (distMoved > 150) {
                     tut.fadeIn = false;
                     tut.alpha = Math.max(0, tut.alpha - dt * 2);
                     if (tut.alpha <= 0) {
@@ -393,14 +396,15 @@ export class GameScene {
                     }
                 }
             } else if (tut.phase === 1) {
-                // Phase 1: Jump hint — fade in near first obstacle
+                // Phase 1: Jump hint — fade in well before first obstacle
                 const dist = tut.firstObstacleX - this.player.x;
-                if (dist < 350 && dist > -100) {
+                if (dist < 550 && dist > -100) {
                     if (tut.fadeIn) {
                         tut.alpha = Math.min(1, tut.alpha + dt * 2);
                     }
                 }
-                if (this.player.x > tut.firstObstacleX + 100) {
+                // Past obstacle → fade out and finish
+                if (this.player.x > tut.firstObstacleX + 150) {
                     tut.fadeIn = false;
                     tut.alpha = Math.max(0, tut.alpha - dt * 2);
                     if (tut.alpha <= 0) {
