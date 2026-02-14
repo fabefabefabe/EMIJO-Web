@@ -189,6 +189,13 @@ export const potholeEyesClosed = renderSprite(potholeEyesClosedData, Palettes.ob
 export const potholeFallInBodyEmi = renderSprite(potholeFallInBodyData, Palettes.emi);
 export const potholeFallInBodyJo = renderSprite(potholeFallInBodyData, Palettes.jo);
 export const potholeFallInHoleTex = renderSprite(potholeFallInHoleData, Palettes.objects);
+
+// Night pothole textures (dark/black appearance)
+export const potholeFlatNight = renderSprite(potholeFlatData, Palettes.objectsNight);
+export const potholeEyesNight = renderSprite(potholeEyesData, Palettes.objectsNight);
+export const potholeEyesClosedNight = renderSprite(potholeEyesClosedData, Palettes.objectsNight);
+export const potholeFallInHoleNightTex = renderSprite(potholeFallInHoleData, Palettes.objectsNight);
+
 export const cooler = renderSprite(coolerData, Palettes.objects);
 export const tree = renderSprite(treeData, Palettes.objects);
 export const leafTex = renderSprite(leafData, Palettes.objects);

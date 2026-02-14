@@ -57,9 +57,9 @@ export class Player {
         // Jump requested by tap/click (consumed on next frame)
         this.jumpRequested = false;
 
-        // Progressive speed: level 1 starts slow, increases each level
-        // Level 1: 0.55x, Level 6: 1.00x, Level 10: 1.36x, Level 15: 1.81x
-        this.levelSpeedMultiplier = 0.55 + (level - 1) * 0.09;
+        // Progressive speed: sqrt curve, grows slower at higher levels
+        // Level 1: 0.55x, Level 6: 1.00x, Level 15: ~1.30x, Level 30: ~1.63x
+        this.levelSpeedMultiplier = 0.55 + 0.09 * Math.sqrt((level - 1) * 5);
     }
 
     get energyFraction() {
@@ -263,8 +263,8 @@ export class Player {
     _updatePotholeSequence(dt) {
         this.potholeTimer += dt;
 
-        // Total duration: 1.6s (0.33s fall-in + 1.27s eyes)
-        if (this.potholeTimer >= 1.6) {
+        // Total duration: 2.1s (0.33s fall-in + 1.77s eyes)
+        if (this.potholeTimer >= 2.1) {
             this.visible = true;
             this.state = STATES.WALKING;
             this.potholeTimer = 0;

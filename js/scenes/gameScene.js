@@ -248,11 +248,11 @@ export class GameScene {
         const treeObstacles = this.obstacles.filter(o =>
             o.type === 'tree' || o.type === 'beachUmbrella'
         );
-        const treeHalfWidth = 60; // approximate tree sprite half-width
+        const treeHalfWidth = 90; // wider detection radius around tree/umbrella
         for (const pickup of [...this.heartPickups, ...this.ammoPickups]) {
             for (const tree of treeObstacles) {
                 if (Math.abs(pickup.x - tree.x) < treeHalfWidth) {
-                    pickup.x = tree.x + treeHalfWidth + 30;
+                    pickup.x = tree.x + treeHalfWidth + 50;
                     if (pickup.baseY !== undefined) pickup.baseY = pickup.y;
                 }
             }
@@ -1238,8 +1238,8 @@ export class GameScene {
         const sidewalkH = 16 * scale;
         const H = Config.sceneHeight;
 
-        // Get dog-in-canopy texture based on animation frame
-        const dogTex = this.dogFrame === 0 ? TC.dogCanopy1Tex : TC.dogCanopy2Tex;
+        // Get rabbit-in-canopy texture based on animation frame
+        const rabbitTex = this.dogFrame === 0 ? TC.dogCanopy1Tex : TC.dogCanopy2Tex;
 
         ctx.imageSmoothingEnabled = false;
 
@@ -1257,27 +1257,26 @@ export class GameScene {
             const treeScreenTop = H - sidewalkH - treeH;
             const treeScreenLeft = screenX - treeW / 2;
 
-            // Dog position: upper-right quadrant of canopy
-            const dogScaleFactor = 1.5;
-            const dogScale = scale * dogScaleFactor;
-            const dogW = dogTex.width * dogScale;
-            const dogH = dogTex.height * dogScale;
+            // Rabbit position: centered in canopy
+            const rabbitScaleFactor = 1.5;
+            const rabbitScale = scale * rabbitScaleFactor;
+            const rabbitW = rabbitTex.width * rabbitScale;
+            const rabbitH = rabbitTex.height * rabbitScale;
 
-            // Position in upper-right quadrant: shifted right and near top
-            const dogScreenX = treeScreenLeft + treeW * 0.5 - dogW * 0.4;
-            const dogScreenY = treeScreenTop + canopyH * 0.08;
+            // Center horizontally in canopy, near top
+            const rabbitScreenX = treeScreenLeft + treeW * 0.5 - rabbitW * 0.5;
+            const rabbitScreenY = treeScreenTop + canopyH * 0.05;
 
-            ctx.drawImage(dogTex, dogScreenX, dogScreenY, dogW, dogH);
+            ctx.drawImage(rabbitTex, rabbitScreenX, rabbitScreenY, rabbitW, rabbitH);
 
-            // Draw meters text on the sign area of the dog sprite
-            // The sign is in the right portion of the sprite (columns 8-13, rows 5-8)
+            // Draw meters text on the sign area (right side of rabbit sprite)
             const metersText = TC.renderTextBlack(marker.meters + 'M');
             const textScale = scale * 0.35;
             const textW = metersText.width * textScale;
             const textH = metersText.height * textScale;
-            // Center text on the sign area
-            const signCenterX = dogScreenX + dogW * 0.65;
-            const signCenterY = dogScreenY + dogH * 0.42;
+            // Sign is on the right side of the rabbit
+            const signCenterX = rabbitScreenX + rabbitW * 0.82;
+            const signCenterY = rabbitScreenY + rabbitH * 0.50;
             const textX = signCenterX - textW / 2;
             const textY = signCenterY - textH / 2;
 

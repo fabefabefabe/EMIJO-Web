@@ -80,6 +80,30 @@ export const Palettes = {
         [30,80,20],         // 20: tree green dark
     ],
 
+    objectsNight: [
+        null,               // 0: transparent
+        [190,190,195],      // 1: rock light (unchanged)
+        [40,40,45],         // 2: rock mid -> very dark
+        [20,20,25],         // 3: rock dark -> near black
+        [220,175,100],      // 4: bench wood light
+        [190,140,75],       // 5: bench wood
+        [155,110,55],       // 6: bench wood dark
+        [140,145,160],      // 7: metal/trash can
+        [105,105,120],      // 8: metal dark
+        [175,180,195],      // 9: metal light
+        [200,0,0],          // 10: red flag
+        [255,50,50],        // 11: red light
+        [255,215,0],        // 12: gold/yellow
+        [200,170,0],        // 13: gold dark
+        [200,200,220],      // 14: white -> dim glow (eyes visible at night)
+        [10,10,15],         // 15: black/outline -> near black
+        [100,60,30],        // 16: pole brown
+        [75,45,20],         // 17: pole brown dark
+        [80,140,50],        // 18: tree green light
+        [50,110,35],        // 19: tree green mid
+        [30,80,20],         // 20: tree green dark
+    ],
+
     ui: [
         null,               // 0: transparent
         [50,200,50],        // 1: energy green

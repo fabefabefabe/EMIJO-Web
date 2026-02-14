@@ -178,6 +178,11 @@ export class Obstacle {
         this.fallAnimTimer = 0;
         this.eyeBlinkTimer = 0;
         this.eyesOpen = true;
+        // Cache speech bubble text (rendered once)
+        if (!this._speechBubbleText) {
+            this._speechBubbleText = TC.renderTextBlack('DUUH, QUIEN APAGO LAS LUCES?');
+        }
+        this.speechBubbleAlpha = 0;
     }
 
     /**
@@ -235,7 +240,7 @@ export class Obstacle {
             }
         }
 
-        // Pothole fall animation (0.33s fall-in + 1.27s eyes = 1.6s total)
+        // Pothole fall animation (0.33s fall-in + 1.77s eyes = 2.1s total)
         if (this.type === 'pothole' && this.activeFallAnim) {
             this.fallAnimTimer += dt;
             if (this.fallAnimPhase === 'fallIn' && this.fallAnimTimer >= 0.33) {
@@ -250,7 +255,11 @@ export class Obstacle {
                     this.eyeBlinkTimer -= 0.25;
                     this.eyesOpen = !this.eyesOpen;
                 }
-                if (this.fallAnimTimer >= 1.27) {
+                // Fade in speech bubble
+                if (this.speechBubbleAlpha < 1) {
+                    this.speechBubbleAlpha = Math.min(1, this.speechBubbleAlpha + dt * 3);
+                }
+                if (this.fallAnimTimer >= 1.77) {
                     this.activeFallAnim = false;
                     this.fallAnimPhase = null;
                 }
@@ -309,6 +318,11 @@ export class Obstacle {
             return { x: this.x, y: this.y, hw: 0, hh: 0 };
         }
 
+        // Rabbit-marker tree has no collision (player walks through)
+        if ((this.type === 'tree' || this.type === 'beachUmbrella') && this.isDogTree) {
+            return { x: this.x, y: this.y, hw: 0, hh: 0 };
+        }
+
         // Tree / beach umbrella: AABB only at canopy
         if (this.type === 'tree' || this.type === 'beachUmbrella') {
             return {
@@ -346,13 +360,21 @@ export class Obstacle {
             }
         } else if (this.type === 'bench' && this.benchVariant >= 0) {
             texture = TC.benchWithPersonFrames[this.benchVariant];
-        } else if (this.type === 'pothole' && this.activeFallAnim) {
-            if (this.fallAnimPhase === 'fallIn') {
-                // Composite draw: hole + character body
-                this._drawPotholeFallIn(ctx, cameraX);
-                return;
-            } else if (this.fallAnimPhase === 'eyes') {
-                texture = this.eyesOpen ? TC.potholeEyes : TC.potholeEyesClosed;
+        } else if (this.type === 'pothole') {
+            const isNight = this.timeOfDay === 'night';
+            if (this.activeFallAnim) {
+                if (this.fallAnimPhase === 'fallIn') {
+                    this._drawPotholeFallIn(ctx, cameraX);
+                    return;
+                } else if (this.fallAnimPhase === 'eyes') {
+                    if (isNight) {
+                        texture = this.eyesOpen ? TC.potholeEyesNight : TC.potholeEyesClosedNight;
+                    } else {
+                        texture = this.eyesOpen ? TC.potholeEyes : TC.potholeEyesClosed;
+                    }
+                }
+            } else if (isNight) {
+                texture = TC.potholeFlatNight;
             }
         }
 
@@ -395,6 +417,11 @@ export class Obstacle {
 
         ctx.drawImage(texture, screenX, screenY, w, h);
 
+        // Speech bubble during pothole eyes phase
+        if (this.type === 'pothole' && this.activeFallAnim && this.fallAnimPhase === 'eyes' && this._speechBubbleText) {
+            this._drawSpeechBubble(ctx, screenX + w / 2, screenY);
+        }
+
         // Tree: draw falling leaves
         if (this.type === 'tree' && this.leaves.length > 0) {
             const leafTex = TC.leafTex;
@@ -427,7 +454,8 @@ export class Obstacle {
         const sidewalkH = 16 * scale;
 
         // Draw hole first (behind body)
-        const holeTex = TC.potholeFallInHoleTex;
+        const isNight = this.timeOfDay === 'night';
+        const holeTex = isNight ? TC.potholeFallInHoleNightTex : TC.potholeFallInHoleTex;
         const holeW = holeTex.width * scale;
         const holeH = holeTex.height * scale;
         const holeScreenX = this.x - cameraX - holeW / 2;
@@ -447,5 +475,86 @@ export class Obstacle {
         const bodyScreenY = holeScreenY - bodyH + 6;
 
         ctx.drawImage(bodyTex, bodyScreenX, bodyScreenY, bodyW, bodyH);
+    }
+
+    /**
+     * Draw speech bubble above pothole during eyes phase.
+     * Style: warm cream/golden background, dark brown border, pixel text, tail pointing down.
+     */
+    _drawSpeechBubble(ctx, centerX, potholeTopY) {
+        const tex = this._speechBubbleText;
+        if (!tex || this.speechBubbleAlpha <= 0) return;
+
+        const scale = Config.pixelScale;
+        const textScale = scale * 0.45;
+        const textW = tex.width * textScale;
+        const textH = tex.height * textScale;
+
+        const padX = 14;
+        const padY = 10;
+        const bubbleW = textW + padX * 2;
+        const bubbleH = textH + padY * 2;
+        const tailH = 10;
+        const cornerR = 6;
+
+        // Position bubble above pothole
+        const bubbleX = centerX - bubbleW / 2;
+        const bubbleY = potholeTopY - bubbleH - tailH - 4;
+
+        ctx.save();
+        ctx.globalAlpha = this.speechBubbleAlpha;
+
+        // --- Bubble body (rounded rect) ---
+        ctx.beginPath();
+        ctx.moveTo(bubbleX + cornerR, bubbleY);
+        ctx.lineTo(bubbleX + bubbleW - cornerR, bubbleY);
+        ctx.quadraticCurveTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + cornerR);
+        ctx.lineTo(bubbleX + bubbleW, bubbleY + bubbleH - cornerR);
+        ctx.quadraticCurveTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX + bubbleW - cornerR, bubbleY + bubbleH);
+        ctx.lineTo(bubbleX + cornerR, bubbleY + bubbleH);
+        ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleH, bubbleX, bubbleY + bubbleH - cornerR);
+        ctx.lineTo(bubbleX, bubbleY + cornerR);
+        ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + cornerR, bubbleY);
+        ctx.closePath();
+
+        // Fill with warm cream/golden
+        ctx.fillStyle = '#FFF2CC';
+        ctx.fill();
+        // Dark brown border
+        ctx.strokeStyle = '#8B5E3C';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // --- Tail (triangle pointing down) ---
+        const tailX = centerX;
+        const tailTopY = bubbleY + bubbleH;
+        ctx.beginPath();
+        ctx.moveTo(tailX - 8, tailTopY - 1);
+        ctx.lineTo(tailX, tailTopY + tailH);
+        ctx.lineTo(tailX + 8, tailTopY - 1);
+        ctx.closePath();
+        ctx.fillStyle = '#FFF2CC';
+        ctx.fill();
+        // Draw tail border lines (only the two outer edges, not the top)
+        ctx.beginPath();
+        ctx.moveTo(tailX - 8, tailTopY - 1);
+        ctx.lineTo(tailX, tailTopY + tailH);
+        ctx.lineTo(tailX + 8, tailTopY - 1);
+        ctx.strokeStyle = '#8B5E3C';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Cover the tail top join line (fill over the border between bubble and tail)
+        ctx.fillStyle = '#FFF2CC';
+        ctx.fillRect(tailX - 7, tailTopY - 2, 14, 4);
+
+        // --- Text ---
+        ctx.imageSmoothingEnabled = false;
+        ctx.globalAlpha = this.speechBubbleAlpha;
+        const textX = bubbleX + padX;
+        const textY = bubbleY + padY;
+        ctx.drawImage(tex, textX, textY, textW, textH);
+
+        ctx.restore();
     }
 }
