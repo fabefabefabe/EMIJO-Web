@@ -17,7 +17,7 @@ export class HallOfFameScene {
         this._titleText = TC.renderText('HALL DE LA FAMA');
         this._headerText = TC.renderText('  # INI NIVEL METROS');
         this._emptyText = TC.renderText('SIN RECORDS AUN');
-        this._continueText = TC.renderText('PULSA ENTER PARA CONTINUAR');
+        this._continueText = TC.renderText('TOCA O PULSA ENTER');
 
         // Pre-render score rows
         this._scoreRows = this.scores.map((s, i) => {

@@ -113,6 +113,21 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
+// --- Canvas Touch Handler (mobile) ---
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = Config.sceneWidth / rect.width;
+    const scaleY = Config.sceneHeight / rect.height;
+    const x = (touch.clientX - rect.left) * scaleX;
+    const y = (touch.clientY - rect.top) * scaleY;
+
+    if (currentScene && currentScene.onClick) {
+        currentScene.onClick(x, y);
+    }
+}, { passive: false });
+
 // --- Game Loop ---
 let lastTime = 0;
 

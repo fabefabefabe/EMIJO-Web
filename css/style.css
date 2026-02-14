@@ -78,6 +78,20 @@ html, body {
     bottom: 10px;
 }
 
+#touchShoot {
+    right: 100px;
+    bottom: 45px;
+}
+
+.shootBtn {
+    background: rgba(255, 100, 50, 0.35) !important;
+    border-color: rgba(255, 150, 50, 0.5) !important;
+}
+
+.shootBtn:active {
+    background: rgba(255, 100, 50, 0.6) !important;
+}
+
 /* Show touch controls on touch devices */
 @media (hover: none) and (pointer: coarse) {
     #touchControls {

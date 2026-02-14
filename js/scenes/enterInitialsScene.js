@@ -23,7 +23,7 @@ export class EnterInitialsScene {
         this._titleText = TC.renderText('NUEVO RECORD!');
         this._levelText = TC.renderText('NIVEL ' + this.level);
         this._metersText = TC.renderText(this.totalMeters + ' METROS');
-        this._instructText = TC.renderText('FLECHAS PARA ELEGIR ENTER PARA CONFIRMAR');
+        this._instructText = TC.renderText('TOCA LAS LETRAS O USA FLECHAS');
     }
 
     _getLetter(index) {
@@ -65,18 +65,7 @@ export class EnterInitialsScene {
 
         // Confirm
         if (input.consumeKey('Enter') || input.consumeKey('Space')) {
-            this.confirmed = true;
-            const initials = this._getInitials();
-            HallOfFame.addScore(initials, this.level, this.totalMeters);
-            // Reset game state
-            this.game.state.totalMeters = 0;
-            this.game.state.currentLevel = undefined;
-            this.game.state.ammo = undefined;
-            // Go to Hall of Fame
-            setTimeout(() => {
-                this.game.music.playTrack('menu');
-                this.game.setScene('hallOfFame');
-            }, 500);
+            this._confirm();
         }
     }
 
@@ -120,9 +109,20 @@ export class EnterInitialsScene {
         const totalSlotWidth = 3 * slotSize + 2 * slotSpacing;
         const startX = (W - totalSlotWidth) / 2;
         const slotY = H * 0.45;
+        const arrowH = 24; // touch-friendly arrow zone height
+
+        // Store slot bounds for touch detection
+        this._slotBounds = [];
 
         for (let i = 0; i < 3; i++) {
             const x = startX + i * (slotSize + slotSpacing);
+
+            // Store bounds
+            this._slotBounds.push({
+                x, y: slotY, w: slotSize, h: slotSize,
+                upZone: { x, y: slotY - arrowH, w: slotSize, h: arrowH },
+                downZone: { x, y: slotY + slotSize, w: slotSize, h: arrowH },
+            });
 
             // Slot background
             ctx.fillStyle = i === this.currentSlot ? '#2a4a8a' : '#1a2a4a';
@@ -143,34 +143,105 @@ export class EnterInitialsScene {
                 slotY + slotSize / 2 - letterH / 2,
                 letterW, letterH);
 
-            // Up/down arrows for current slot
-            if (i === this.currentSlot && this.cursorBlink) {
-                ctx.fillStyle = '#ffdd44';
-                // Up arrow
-                ctx.beginPath();
-                ctx.moveTo(x + slotSize / 2, slotY - 12);
-                ctx.lineTo(x + slotSize / 2 - 8, slotY - 4);
-                ctx.lineTo(x + slotSize / 2 + 8, slotY - 4);
-                ctx.fill();
-                // Down arrow
-                ctx.beginPath();
-                ctx.moveTo(x + slotSize / 2, slotY + slotSize + 12);
-                ctx.lineTo(x + slotSize / 2 - 8, slotY + slotSize + 4);
-                ctx.lineTo(x + slotSize / 2 + 8, slotY + slotSize + 4);
-                ctx.fill();
-            }
+            // Up/down arrows — always visible for all slots (touch targets)
+            const isSelected = i === this.currentSlot;
+            const arrowAlpha = isSelected ? (this.cursorBlink ? 1.0 : 0.5) : 0.3;
+            ctx.save();
+            ctx.globalAlpha = arrowAlpha;
+            ctx.fillStyle = isSelected ? '#ffdd44' : '#6688cc';
+            // Up arrow
+            ctx.beginPath();
+            ctx.moveTo(x + slotSize / 2, slotY - 14);
+            ctx.lineTo(x + slotSize / 2 - 10, slotY - 4);
+            ctx.lineTo(x + slotSize / 2 + 10, slotY - 4);
+            ctx.fill();
+            // Down arrow
+            ctx.beginPath();
+            ctx.moveTo(x + slotSize / 2, slotY + slotSize + 14);
+            ctx.lineTo(x + slotSize / 2 - 10, slotY + slotSize + 4);
+            ctx.lineTo(x + slotSize / 2 + 10, slotY + slotSize + 4);
+            ctx.fill();
+            ctx.restore();
         }
+
+        // OK button for touch confirm
+        const okBtnW = 120;
+        const okBtnH = 44;
+        const okBtnX = (W - okBtnW) / 2;
+        const okBtnY = H * 0.72;
+        this._okBounds = { x: okBtnX, y: okBtnY, w: okBtnW, h: okBtnH };
+
+        ctx.fillStyle = '#2a6a2a';
+        ctx.fillRect(okBtnX, okBtnY, okBtnW, okBtnH);
+        ctx.strokeStyle = '#44cc44';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(okBtnX, okBtnY, okBtnW, okBtnH);
+
+        const okText = TC.renderText('OK');
+        const okScale = scale * 1.2;
+        const okW = okText.width * okScale;
+        const okH = okText.height * okScale;
+        ctx.drawImage(okText, okBtnX + okBtnW / 2 - okW / 2, okBtnY + okBtnH / 2 - okH / 2, okW, okH);
 
         // Instructions
         const instrScale = scale * 0.5;
         const instrW = this._instructText.width * instrScale;
         const instrH = this._instructText.height * instrScale;
         ctx.globalAlpha = 0.6 + Math.sin(this.timer * 2) * 0.3;
-        ctx.drawImage(this._instructText, (W - instrW) / 2, H * 0.82, instrW, instrH);
+        ctx.drawImage(this._instructText, (W - instrW) / 2, H * 0.88, instrW, instrH);
         ctx.globalAlpha = 1.0;
     }
 
     onClick(x, y) {
-        // Not used
+        if (this.confirmed) return;
+
+        // Check OK button
+        if (this._okBounds && this._hitTest(x, y, this._okBounds)) {
+            this._confirm();
+            return;
+        }
+
+        // Check slot arrows and slot selection
+        if (this._slotBounds) {
+            for (let i = 0; i < this._slotBounds.length; i++) {
+                const slot = this._slotBounds[i];
+                // Tap up arrow zone
+                if (this._hitTest(x, y, slot.upZone)) {
+                    this.currentSlot = i;
+                    this.letters[i] = (this.letters[i] + 1) % 26;
+                    return;
+                }
+                // Tap down arrow zone
+                if (this._hitTest(x, y, slot.downZone)) {
+                    this.currentSlot = i;
+                    this.letters[i] = (this.letters[i] + 25) % 26;
+                    return;
+                }
+                // Tap on slot itself — select it
+                if (this._hitTest(x, y, slot)) {
+                    this.currentSlot = i;
+                    return;
+                }
+            }
+        }
+    }
+
+    _confirm() {
+        if (this.confirmed) return;
+        this.confirmed = true;
+        const initials = this._getInitials();
+        HallOfFame.addScore(initials, this.level, this.totalMeters);
+        this.game.state.totalMeters = 0;
+        this.game.state.currentLevel = undefined;
+        this.game.state.ammo = undefined;
+        setTimeout(() => {
+            this.game.music.playTrack('menu');
+            this.game.setScene('hallOfFame');
+        }, 500);
+    }
+
+    _hitTest(x, y, bounds) {
+        return x >= bounds.x && x <= bounds.x + bounds.w &&
+               y >= bounds.y && y <= bounds.y + bounds.h;
     }
 }

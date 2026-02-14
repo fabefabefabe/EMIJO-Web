@@ -39,7 +39,7 @@ export class LevelCompleteScene {
         // Text caches (Spanish) - mostrar nivel completado
         this._titleText = TC.renderText('NIVEL ' + this.currentLevel + ' COMPLETO!');
         this._congratsText = TC.renderText('BIEN HECHO ' + this.characterName + '!');
-        this._continueText = TC.renderText('PULSA ENTER PARA SEGUIR');
+        this._continueText = TC.renderText('TOCA O PULSA ENTER');
 
         this.canProceed = false;
         this.proceedTimer = 0;

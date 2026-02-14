@@ -327,8 +327,8 @@ export class GameScene {
             this.game.toggleMusic();
         }
 
-        // Superpower: ENTER key shoots projectile
-        if (input.consumeKey('Enter') && this.canShoot) {
+        // Superpower: ENTER key or touch shoot button fires projectile
+        if ((input.consumeKey('Enter') || input.consumeTouch('shoot')) && this.canShoot) {
             this._fireProjectile();
         }
 

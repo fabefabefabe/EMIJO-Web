@@ -8,6 +8,7 @@ export class InputManager {
             right: false,
             jump: false,
             crouch: false,
+            shoot: false,
         };
 
         this._setupKeyboard();
@@ -39,6 +40,7 @@ export class InputManager {
         bind('touchRight', 'right');
         bind('touchJump', 'jump');
         bind('touchCrouch', 'crouch');
+        bind('touchShoot', 'shoot');
     }
 
     get isMovingLeft() {
@@ -76,6 +78,15 @@ export class InputManager {
     consumeKey(code) {
         if (this.keys.has(code)) {
             this.keys.delete(code);
+            return true;
+        }
+        return false;
+    }
+
+    // Consume a touch state (one-shot read, resets to false)
+    consumeTouch(prop) {
+        if (this.touchState[prop]) {
+            this.touchState[prop] = false;
             return true;
         }
         return false;
