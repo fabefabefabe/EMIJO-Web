@@ -75,6 +75,9 @@ export const Palettes = {
         [60,60,65],         // 15: black/outline
         [100,60,30],        // 16: pole brown
         [75,45,20],         // 17: pole brown dark
+        [80,140,50],        // 18: tree green light
+        [50,110,35],        // 19: tree green mid
+        [30,80,20],         // 20: tree green dark
     ],
 
     ui: [
@@ -179,6 +182,23 @@ export const Palettes = {
         [80,80,90],         // 2: mid gray (detail, darker at night)
         [110,110,120],      // 3: light gray (highlight, dimmer)
         [255,255,180],      // 4: bright warm white (lantern glowing!)
+    ],
+
+    jogger: [
+        null,               // 0: transparent
+        [255,200,160],      // 1: skin
+        [220,170,130],      // 2: skin shadow
+        [255,100,180],      // 3: hot pink (main outfit)
+        [220,60,140],       // 4: hot pink shadow
+        [180,40,110],       // 5: hot pink dark
+        [255,180,220],      // 6: light pink (headband/accents)
+        [80,80,80],         // 7: dark gray (shoes)
+        [55,55,55],         // 8: shoes shadow
+        [30,30,30],         // 9: outline/eyes
+        [255,255,255],      // 10: white (socks, eyes)
+        [200,60,60],        // 11: mouth/red
+        [160,120,80],       // 12: brown hair
+        [120,85,55],        // 13: hair shadow
     ],
 
     gardener: [

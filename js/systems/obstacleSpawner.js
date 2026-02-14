@@ -1,8 +1,8 @@
 // Obstacle Spawner - generates random obstacles across the level
 import { Config } from '../config.js';
 
-const GROUND_TYPES = ['rock', 'bench', 'trashCan', 'pothole'];
-const OVERHEAD_TYPES = ['awning', 'lowBranch'];
+const GROUND_TYPES = ['rock', 'bench', 'trashCan', 'pothole', 'cooler'];
+const TREE_CHANCE = 0.15; // 15% chance of tree
 
 /**
  * Check if x position is inside any exclusion zone.
@@ -15,6 +15,17 @@ function isInExclusionZone(x, exclusionZones) {
         if (x >= zone.xMin && x <= zone.xMax) return true;
     }
     return false;
+}
+
+/**
+ * Pick a random obstacle type.
+ * 15% tree, 85% random ground type.
+ */
+function pickRandomType() {
+    if (Math.random() < TREE_CHANCE) {
+        return 'tree';
+    }
+    return GROUND_TYPES[Math.floor(Math.random() * GROUND_TYPES.length)];
 }
 
 /**
@@ -38,13 +49,7 @@ export function generateObstacles(levelWidth, groundSurface, exclusionZones = []
         // Skip if inside an exclusion zone
         if (isInExclusionZone(currentX, exclusionZones)) continue;
 
-        // 25% chance overhead obstacle, 75% ground obstacle
-        let type;
-        if (Math.random() < 0.25) {
-            type = OVERHEAD_TYPES[Math.floor(Math.random() * OVERHEAD_TYPES.length)];
-        } else {
-            type = GROUND_TYPES[Math.floor(Math.random() * GROUND_TYPES.length)];
-        }
+        const type = pickRandomType();
         obstacles.push({ type, x: currentX, groundSurface });
 
         // 15% chance to add a consecutive obstacle (close together but jumpable)
@@ -53,7 +58,7 @@ export function generateObstacles(levelWidth, groundSurface, exclusionZones = []
             const secondX = currentX + closeSpacing;
             if (!isInExclusionZone(secondX, exclusionZones)) {
                 currentX = secondX;
-                // Second obstacle is always a ground type (jumpable)
+                // Second obstacle is always a ground type (not tree)
                 const secondType = GROUND_TYPES[Math.floor(Math.random() * GROUND_TYPES.length)];
                 obstacles.push({ type: secondType, x: currentX, groundSurface });
             }

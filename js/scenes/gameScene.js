@@ -13,6 +13,7 @@ import { HeartPickup } from '../entities/heartPickup.js';
 import { Projectile } from '../entities/projectile.js';
 import { AmmoPickup } from '../entities/ammoPickup.js';
 import { Parents } from '../entities/parents.js';
+import { Jogger } from '../entities/jogger.js';
 import { HallOfFame } from '../systems/hallOfFame.js';
 
 export class GameScene {
@@ -103,6 +104,11 @@ export class GameScene {
         // Ammo pickups (collecting activates auto-shoot)
         this.ammoPickups = [];
         this._spawnFixedAmmo();
+
+        // Joggers (level 6+)
+        this.joggers = [];
+        this.joggerSpawnTimer = 0;
+        this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
 
         // Dogs at 100m markers
         this.dogMarkers = this._generateDogMarkers();
@@ -451,8 +457,12 @@ export class GameScene {
         // Collision: projectiles vs obstacles
         for (const proj of this.projectiles) {
             for (const obstacle of this.obstacles) {
-                if (!obstacle.destroyed && aabbOverlap(proj.getAABB(), obstacle.getAABB())) {
-                    // Destroy obstacle and projectile
+                if (obstacle.destroyed) continue;
+                // Potholes can't be destroyed by projectiles
+                if (obstacle.type === 'pothole') continue;
+                // Knocked trash cans can't be destroyed either
+                if (obstacle.type === 'trashCan' && obstacle.knocked) continue;
+                if (aabbOverlap(proj.getAABB(), obstacle.getAABB())) {
                     obstacle.destroyed = true;
                     proj.destroy();
                     this.game.music.playDestroySound();
@@ -505,15 +515,70 @@ export class GameScene {
         this.ammoPickups = this.ammoPickups.filter(a => a.alive && a.x > cullX);
         this.dogMarkers = this.dogMarkers.filter(d => d.x > cullX);
         this.lightPoles = this.lightPoles.filter(p => p.x > cullX);
+        this.joggers = this.joggers.filter(j => j.alive && j.x > cullX);
 
-        // Collision: player vs obstacles
+        // Spawn joggers (level 6+)
+        if (this.currentLevel >= Config.joggerMinLevel) {
+            this.joggerSpawnTimer += dt;
+            if (this.joggerSpawnTimer >= this.joggerNextSpawnAt) {
+                this.joggerSpawnTimer = 0;
+                this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
+                this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+            }
+        }
+
+        // Update joggers
+        for (const jogger of this.joggers) {
+            jogger.update(dt);
+        }
+        this.joggers = this.joggers.filter(j => j.alive);
+
+        // Collision: player vs obstacles (type-specific)
         const playerAABB = this.player.getAABB();
         for (const obstacle of this.obstacles) {
-            if (aabbOverlap(playerAABB, obstacle.getAABB())) {
+            const obstAABB = obstacle.getAABB();
+            if (!aabbOverlap(playerAABB, obstAABB)) continue;
+
+            if (obstacle.type === 'tree') {
+                // Tree: only collides when jumping (branch is above standing player)
+                if (!this.player.isOnGround) {
+                    if (this.player.tripAndFall()) {
+                        this.game.music.playHitSound();
+                    }
+                    break;
+                }
+                // Standing player walks under the tree — no collision
+            } else if (obstacle.type === 'pothole') {
+                // Pothole: special fall-in animation
+                if (this.player.fallInHole(obstacle)) {
+                    this.game.music.playHitSound();
+                }
+                break;
+            } else if (obstacle.type === 'trashCan') {
+                // Trash can: normal trip + knock over the can
+                if (this.player.tripAndFall()) {
+                    obstacle.knockOver();
+                    this.game.music.playHitSound();
+                }
+                break;
+            } else {
+                // Rock, bench, cooler: normal trip
                 if (this.player.tripAndFall()) {
                     this.game.music.playHitSound();
                 }
-                break; // Only one hit per frame
+                break;
+            }
+        }
+
+        // Collision: player vs joggers
+        for (const jogger of this.joggers) {
+            if (jogger.knocked) continue;
+            if (aabbOverlap(playerAABB, jogger.getAABB())) {
+                if (this.player.tripAndFall()) {
+                    jogger.knockDown();
+                    this.game.music.playHitSound();
+                }
+                break;
             }
         }
 
@@ -555,6 +620,11 @@ export class GameScene {
         // Draw obstacles
         for (const obstacle of this.obstacles) {
             obstacle.draw(ctx, camX);
+        }
+
+        // Draw joggers
+        for (const jogger of this.joggers) {
+            jogger.draw(ctx, camX);
         }
 
         // Draw flag

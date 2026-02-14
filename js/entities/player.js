@@ -9,6 +9,7 @@ const STATES = {
     TRIPPING: 'tripping',
     LYING: 'lying',
     GETTING_UP: 'gettingUp',
+    FALLING_IN_HOLE: 'fallingInHole',
 };
 
 export class Player {
@@ -49,6 +50,10 @@ export class Player {
         // Visibility (for family hug animation)
         this.visible = true;
 
+        // Pothole fall-in state
+        this.potholeTimer = 0;
+        this.potholeObstacle = null;
+
         // Jump requested by tap/click (consumed on next frame)
         this.jumpRequested = false;
 
@@ -87,7 +92,9 @@ export class Player {
         this._updateInvincibility(dt);
 
         // Update trip animation
-        if (this.state === STATES.TRIPPING || this.state === STATES.LYING || this.state === STATES.GETTING_UP) {
+        if (this.state === STATES.FALLING_IN_HOLE) {
+            this._updatePotholeSequence(dt);
+        } else if (this.state === STATES.TRIPPING || this.state === STATES.LYING || this.state === STATES.GETTING_UP) {
             this._updateTripSequence(dt);
         } else {
             // Auto-run + jump input
@@ -224,6 +231,53 @@ export class Player {
         }
     }
 
+    /**
+     * Called when player falls into a pothole.
+     * @param {Obstacle} potholeObstacle - the pothole obstacle
+     * @returns {boolean} true if player fell in, false if blocked
+     */
+    fallInHole(potholeObstacle) {
+        if (this.state === STATES.TRIPPING || this.state === STATES.LYING ||
+            this.state === STATES.GETTING_UP || this.state === STATES.FALLING_IN_HOLE) return false;
+        if (this.isInvincible) return false;
+
+        this.state = STATES.FALLING_IN_HOLE;
+        this.vx = 0;
+        this.vy = 0;
+        this.visible = false;
+        this.potholeTimer = 0;
+        this.potholeObstacle = potholeObstacle;
+
+        // Take damage
+        this.energy = Math.max(0, this.energy - Config.damagePerHit);
+        if (this.energy <= 0) {
+            this.isAlive = false;
+        }
+
+        // Start obstacle animation
+        potholeObstacle.startFallAnimation();
+
+        return true;
+    }
+
+    _updatePotholeSequence(dt) {
+        this.potholeTimer += dt;
+
+        // Total duration: 1.1s (0.33s fall-in + 0.77s eyes)
+        if (this.potholeTimer >= 1.1) {
+            this.visible = true;
+            this.state = STATES.WALKING;
+            this.potholeTimer = 0;
+            this.potholeObstacle = null;
+            // Move past the pothole
+            this.x += 30;
+            // Activate invincibility
+            this.isInvincible = true;
+            this.invTimer = 0;
+            this.blinkTimer = 0;
+        }
+    }
+
     _updateInvincibility(dt) {
         if (!this.isInvincible) {
             this.alpha = 1.0;
@@ -261,6 +315,8 @@ export class Player {
                 return this.textures.lyingDown;
             case STATES.GETTING_UP:
                 return this.textures.getUp;
+            case STATES.FALLING_IN_HOLE:
+                return this.textures.idle; // Not drawn (visible=false)
             default:
                 return this.textures.idle;
         }
@@ -320,6 +376,8 @@ export class Player {
         this.tripTimer = 0;
         this.tripPhase = '';
         this.fallMomentum = 0;
+        this.potholeTimer = 0;
+        this.potholeObstacle = null;
         this.jumpRequested = false;
     }
 }

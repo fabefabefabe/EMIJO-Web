@@ -14,7 +14,8 @@ import { tile as bushLargeTileData } from './sprites/bushLargePixels.js';
 import { tile as sidewalkTileData } from './sprites/sidewalkPixels.js';
 
 // Object sprites
-import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, pothole as potholeData, awning as awningData, lowBranch as lowBranchData } from './sprites/obstaclePixels.js';
+import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, trashCanFalling as trashCanFallingData, trashCanSpilled as trashCanSpilledData, potholeFlat as potholeFlatData, potholeFallIn as potholeFallInData, potholeEyes as potholeEyesData, potholeEyesClosed as potholeEyesClosedData, cooler as coolerData, tree as treeData } from './sprites/obstaclePixels.js';
+import { joggerRun1, joggerRun2, joggerFallen } from './sprites/joggerPixels.js';
 import { flag as flagData } from './sprites/flagPixels.js';
 import { frame1 as birdFrame1, frame2 as birdFrame2, frame3 as birdFrame3 } from './sprites/birdPixels.js';
 
@@ -118,9 +119,14 @@ export const sidewalkNightTile = renderSprite(sidewalkTileData, Palettes.environ
 export const rock = renderSprite(rockData, Palettes.objects);
 export const bench = renderSprite(benchData, Palettes.objects);
 export const trashCan = renderSprite(trashCanData, Palettes.objects);
-export const pothole = renderSprite(potholeData, Palettes.objects);
-export const awning = renderSprite(awningData, Palettes.objects);
-export const lowBranch = renderSprite(lowBranchData, Palettes.objects);
+export const trashCanFallingTex = renderSprite(trashCanFallingData, Palettes.objects);
+export const trashCanSpilledTex = renderSprite(trashCanSpilledData, Palettes.objects);
+export const potholeFlat = renderSprite(potholeFlatData, Palettes.objects);
+export const potholeFallIn = renderSprite(potholeFallInData, Palettes.objects);
+export const potholeEyes = renderSprite(potholeEyesData, Palettes.objects);
+export const potholeEyesClosed = renderSprite(potholeEyesClosedData, Palettes.objects);
+export const cooler = renderSprite(coolerData, Palettes.objects);
+export const tree = renderSprite(treeData, Palettes.objects);
 export const flag = renderSprite(flagData, Palettes.objects);
 
 export const birdFrames = [
@@ -141,6 +147,13 @@ export const benchWithPersonFrames = [
     renderSprite(benchWithPerson1, Palettes.objects),
     renderSprite(benchWithPerson2, Palettes.objects),
 ];
+
+// --- Jogger Textures ---
+export const joggerRunFrames = [
+    renderSprite(joggerRun1, Palettes.jogger),
+    renderSprite(joggerRun2, Palettes.jogger),
+];
+export const joggerFallenTex = renderSprite(joggerFallen, Palettes.jogger);
 
 // --- Sun, Boat, Gardener Textures ---
 export const sunFrames = [

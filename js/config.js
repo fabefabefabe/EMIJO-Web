@@ -54,6 +54,11 @@ export const Config = {
     // Anti-idle skater
     idleTimeForSkater: 15,
 
+    // Jogger NPC (from level 6+)
+    joggerBaseSpawnInterval: 8.0,   // average seconds between jogger spawns
+    joggerSpeed: 200,               // px/s (moves toward left)
+    joggerMinLevel: 6,              // first level joggers appear
+
     // Ammo (auto-shoot power-up)
     initialAmmo: 0,           // No starting ammo (runner mode)
     maxAmmo: 10,              // Max ammo can hold
