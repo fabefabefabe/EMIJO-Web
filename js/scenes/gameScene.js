@@ -899,7 +899,9 @@ export class GameScene {
 
         // Draw pothole speech bubble on top of everything (deferred for z-order)
         for (const obstacle of this.obstacles) {
-            obstacle.drawSpeechBubbleDeferred(ctx);
+            if (obstacle.drawSpeechBubbleDeferred) {
+                obstacle.drawSpeechBubbleDeferred(ctx);
+            }
         }
 
         // Draw floating hearts during family hug
