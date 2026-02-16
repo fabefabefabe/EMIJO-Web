@@ -88,15 +88,20 @@ export class SplashScene {
 
             const creditScale = Config.pixelScale * 0.5;
 
-            const yearText = TC.renderText('2025');
+            const yearText = TC.renderText('2026');
             const yw = yearText.width * creditScale;
             const yh = yearText.height * creditScale;
-            ctx.drawImage(yearText, (W - yw) / 2, H * 0.83, yw, yh);
+            ctx.drawImage(yearText, (W - yw) / 2, H * 0.80, yw, yh);
+
+            const authorText = TC.renderText('CREADO POR FABRICIO GONZALEZ');
+            const aw = authorText.width * creditScale;
+            const ah = authorText.height * creditScale;
+            ctx.drawImage(authorText, (W - aw) / 2, H * 0.86, aw, ah);
 
             const creditText = TC.renderText('CREADO CON CLAUDE ANTHROPIC OPUS 4.6');
             const cw = creditText.width * creditScale;
             const ch = creditText.height * creditScale;
-            ctx.drawImage(creditText, (W - cw) / 2, H * 0.89, cw, ch);
+            ctx.drawImage(creditText, (W - cw) / 2, H * 0.92, cw, ch);
 
             ctx.restore();
         }
