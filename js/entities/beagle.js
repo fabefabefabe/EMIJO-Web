@@ -309,7 +309,7 @@ export class Beagle {
         }
     }
 
-    draw(ctx, cameraX) {
+    draw(ctx, cameraX, timeOfDay) {
         if (!this.alive) return;
 
         // Don't draw when offscreen
@@ -337,6 +337,20 @@ export class Beagle {
         const screenX = this.x - cameraX - w / 2;
         const sidewalkH = 16 * scale;
         const screenY = Config.sceneHeight - sidewalkH - h;
+
+        // Shadow during daytime
+        if (timeOfDay === 'day') {
+            const shadowW = w * 0.7;
+            const shadowH = 4;
+            const feetY = Config.sceneHeight - sidewalkH;
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.ellipse(this.x - cameraX, feetY - 2, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
 
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(texture, screenX, screenY, w, h);

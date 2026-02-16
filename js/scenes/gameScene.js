@@ -891,11 +891,11 @@ export class GameScene {
 
         // Draw beagle companion
         if (this.beagle) {
-            this.beagle.draw(ctx, camX);
+            this.beagle.draw(ctx, camX, this.timeOfDay);
         }
 
         // Draw player
-        this.player.draw(ctx, camX);
+        this.player.draw(ctx, camX, this.timeOfDay);
 
         // Draw pothole speech bubble on top of everything (deferred for z-order)
         for (const obstacle of this.obstacles) {
@@ -1269,15 +1269,15 @@ export class GameScene {
             const treeScreenTop = H - sidewalkH - treeH;
             const treeScreenLeft = screenX - treeW / 2;
 
-            // Rabbit position: centered over tree canopy (3x larger)
-            const rabbitScaleFactor = 4.5;
+            // Rabbit position: centered in canopy (half of previous 4.5)
+            const rabbitScaleFactor = 2.25;
             const rabbitScale = scale * rabbitScaleFactor;
             const rabbitW = rabbitTex.width * rabbitScale;
             const rabbitH = rabbitTex.height * rabbitScale;
 
-            // Center horizontally over tree, position above canopy
+            // Center horizontally in canopy, near top
             const rabbitScreenX = treeScreenLeft + treeW * 0.5 - rabbitW * 0.5;
-            const rabbitScreenY = treeScreenTop - rabbitH * 0.3;
+            const rabbitScreenY = treeScreenTop + canopyH * 0.02;
 
             ctx.drawImage(rabbitTex, rabbitScreenX, rabbitScreenY, rabbitW, rabbitH);
 

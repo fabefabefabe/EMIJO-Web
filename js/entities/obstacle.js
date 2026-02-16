@@ -275,7 +275,7 @@ export class Obstacle {
         // Beach umbrella sway animation (gentle oscillation)
         if (this.type === 'beachUmbrella') {
             this.swayTimer += dt;
-            this.swayAngle = Math.sin(this.swayTimer * 1.5) * 0.03; // ~1.7 degrees max
+            this.swayAngle = Math.sin(this.swayTimer * 2.0) * 0.07; // ~1.7 degrees max
         }
 
         // Tree / umbrella shake animation + falling leaves
@@ -420,17 +420,24 @@ export class Obstacle {
             ctx.restore();
         }
 
-        // Tree / umbrella: shake effect (oscillate X)
+        // Tree / umbrella: shake → rotation around base (sway effect)
+        let needsRotRestore = false;
         if ((this.type === 'tree' || this.type === 'beachUmbrella') && this.shaking) {
             const progress = this.shakeTimer / this.shakeDuration;
-            const shakeAmount = 4 * (1 - progress) * Math.sin(this.shakeTimer * 30);
-            screenX += shakeAmount;
+            const decay = 1 - progress;
+            const swayRot = decay * 0.04 * Math.sin(this.shakeTimer * 18);
+            ctx.save();
+            const pivotX = screenX + w / 2;
+            const pivotY = screenY + h;
+            ctx.translate(pivotX, pivotY);
+            ctx.rotate(swayRot);
+            ctx.translate(-pivotX, -pivotY);
+            needsRotRestore = true;
         }
 
         // Beach umbrella: sway rotation around pole base
         if (this.type === 'beachUmbrella' && this.swayAngle) {
-            ctx.save();
-            // Pivot at the bottom center of the pole
+            if (!needsRotRestore) ctx.save();
             const pivotX = screenX + w / 2;
             const pivotY = screenY + h;
             ctx.translate(pivotX, pivotY);
@@ -438,8 +445,10 @@ export class Obstacle {
             ctx.translate(-pivotX, -pivotY);
             ctx.drawImage(texture, screenX, screenY, w, h);
             ctx.restore();
+            needsRotRestore = false;
         } else {
             ctx.drawImage(texture, screenX, screenY, w, h);
+            if (needsRotRestore) ctx.restore();
         }
 
         // Speech bubble during pothole eyes phase — deferred to separate pass for z-order

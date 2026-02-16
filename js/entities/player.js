@@ -326,7 +326,7 @@ export class Player {
     /**
      * Draws the player on the canvas.
      */
-    draw(ctx, cameraX) {
+    draw(ctx, cameraX, timeOfDay) {
         if (!this.visible) return;
         const texture = this.getCurrentTexture();
         const scale = Config.pixelScale;
@@ -336,13 +336,29 @@ export class Player {
         const sidewalkH = 16 * scale; // sidewalk tile height
         const screenY = Config.sceneHeight - sidewalkH - spriteH - (this.y - Config.groundSurface);
 
-        ctx.save();
-        ctx.globalAlpha = this.alpha;
-        ctx.imageSmoothingEnabled = false;
-
         const w = texture.width * scale;
         const h = texture.height * scale;
         const drawX = screenX - w / 2;
+
+        // Shadow during daytime (drawn before sprite)
+        if (timeOfDay === 'day') {
+            const shadowW = w * 0.8;
+            const shadowH = 6;
+            const feetY = Config.sceneHeight - sidewalkH;
+            const jumpHeight = this.y - Config.groundSurface;
+            const shadowAlpha = Math.max(0.1, 0.35 - jumpHeight * 0.002);
+            ctx.save();
+            ctx.globalAlpha = shadowAlpha;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.ellipse(screenX, feetY - 2, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.imageSmoothingEnabled = false;
 
         if (!this.facingRight) {
             ctx.translate(drawX + w, screenY);
