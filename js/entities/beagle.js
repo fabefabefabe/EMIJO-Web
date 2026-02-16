@@ -58,6 +58,11 @@ export class Beagle {
         // Level complete target
         this.levelCompleteTargetX = 0;
 
+        // Vertical position (for jumping over potholes)
+        this.y = 0; // height above ground (0 = on ground)
+        this.vy = 0;
+        this.jumping = false;
+
         this.alive = true;
     }
 
@@ -72,7 +77,23 @@ export class Beagle {
         this.animTimer = 0;
     }
 
-    update(dt, playerX, joggers, skaters) {
+    /**
+     * Returns AABB for collision with NPCs (only active during sprint/chase).
+     */
+    getAABB() {
+        if (this.state !== STATES.SPRINTING && this.state !== STATES.CHASING) {
+            return { x: this.x, y: 0, hw: 0, hh: 0 };
+        }
+        const scale = Config.pixelScale;
+        return {
+            x: this.x,
+            y: Config.groundSurface + 10 * scale,
+            hw: 8 * scale,
+            hh: 5 * scale,
+        };
+    }
+
+    update(dt, playerX, joggers, skaters, obstacles) {
         if (!this.alive) return;
 
         this.timeSinceLastSniff += dt;
@@ -103,6 +124,33 @@ export class Beagle {
             case STATES.LEVEL_COMPLETE:
                 this._updateLevelComplete(dt);
                 break;
+        }
+
+        // --- Jump physics (applies in any state) ---
+        if (this.jumping) {
+            this.vy += 800 * dt; // gravity pulls down
+            this.y -= this.vy * dt;
+            if (this.y <= 0) {
+                this.y = 0;
+                this.vy = 0;
+                this.jumping = false;
+            }
+        }
+
+        // --- Detect nearby potholes and jump over them ---
+        if (!this.jumping && this.state !== STATES.SITTING && this.state !== STATES.SNIFFING &&
+            this.state !== STATES.OFFSCREEN && obstacles) {
+            for (const obs of obstacles) {
+                if (obs.type === 'pothole' && !obs.destroyed) {
+                    const dist = obs.x - this.x;
+                    if (dist > 30 && dist < 100) {
+                        this.jumping = true;
+                        this.y = 0;
+                        this.vy = -280; // upward
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -318,16 +366,21 @@ export class Beagle {
         const scale = Config.pixelScale;
         let texture;
 
-        switch (this.state) {
-            case STATES.SITTING:
-                texture = TC.beagleSitTex;
-                break;
-            case STATES.SNIFFING:
-                texture = this.frame === 0 ? TC.beagleSniff1Tex : TC.beagleSniff2Tex;
-                break;
-            default: // running, chasing, returning, sprinting, levelComplete
-                texture = this.frame === 0 ? TC.beagleRun1Tex : TC.beagleRun2Tex;
-                break;
+        // Use jump texture when airborne, regardless of state
+        if (this.jumping && TC.beagleJumpTex) {
+            texture = TC.beagleJumpTex;
+        } else {
+            switch (this.state) {
+                case STATES.SITTING:
+                    texture = TC.beagleSitTex;
+                    break;
+                case STATES.SNIFFING:
+                    texture = this.frame === 0 ? TC.beagleSniff1Tex : TC.beagleSniff2Tex;
+                    break;
+                default: // running, chasing, returning, sprinting, levelComplete
+                    texture = this.frame === 0 ? TC.beagleRun1Tex : TC.beagleRun2Tex;
+                    break;
+            }
         }
 
         if (!texture) return;
@@ -336,15 +389,16 @@ export class Beagle {
         const h = texture.height * scale;
         const screenX = this.x - cameraX - w / 2;
         const sidewalkH = 16 * scale;
-        const screenY = Config.sceneHeight - sidewalkH - h;
+        const screenY = Config.sceneHeight - sidewalkH - h - this.y;
 
-        // Shadow during daytime
+        // Shadow during daytime (stays on ground, fades when jumping)
         if (timeOfDay === 'day') {
             const shadowW = w * 0.7;
             const shadowH = 4;
             const feetY = Config.sceneHeight - sidewalkH;
+            const shadowAlpha = Math.max(0.1, 0.3 - this.y * 0.003);
             ctx.save();
-            ctx.globalAlpha = 0.3;
+            ctx.globalAlpha = shadowAlpha;
             ctx.fillStyle = '#000';
             ctx.beginPath();
             ctx.ellipse(this.x - cameraX, feetY - 2, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);

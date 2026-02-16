@@ -102,6 +102,17 @@ export class Obstacle {
             this.swayAngle = 0;
         }
 
+        // --- Beach ball: kickable physics ---
+        if (type === 'beachBall') {
+            this.kicked = false;
+            this.kickVx = 0;
+            this.kickVy = 0;
+            this.kickY = 0; // height offset from ground
+            this.kickRotation = 0;
+        }
+
+        this.alive = true;
+
         // --- Y positioning ---
         const spriteH = this.texture.height * scale;
 
@@ -316,6 +327,29 @@ export class Obstacle {
                 }
             }
         }
+
+        // Beach ball kick physics
+        if (this.type === 'beachBall' && this.kicked) {
+            this.kickVx *= 0.995; // slight air resistance
+            this.x += this.kickVx * dt;
+            this.kickVy += 600 * dt; // gravity
+            this.kickY -= this.kickVy * dt;
+            this.kickRotation += 8 * dt; // spin
+
+            // Bounce on ground
+            if (this.kickY <= 0) {
+                this.kickY = 0;
+                this.kickVy = -this.kickVy * 0.5; // bounce with energy loss
+                if (Math.abs(this.kickVy) < 30) {
+                    this.kickVy = 0; // stop bouncing
+                }
+            }
+
+            // Mark dead when slowed down enough
+            if (this.kickVx < 10) {
+                this.alive = false;
+            }
+        }
     }
 
     /**
@@ -327,6 +361,11 @@ export class Obstacle {
 
         // Knocked trash can has no collision
         if (this.type === 'trashCan' && this.knocked) {
+            return { x: this.x, y: this.y, hw: 0, hh: 0 };
+        }
+
+        // Kicked beach ball has no collision
+        if (this.type === 'beachBall' && this.kicked) {
             return { x: this.x, y: this.y, hw: 0, hh: 0 };
         }
 
@@ -388,6 +427,25 @@ export class Obstacle {
             } else if (isNight) {
                 texture = TC.potholeFlatNight;
             }
+        }
+
+        // Kicked beach ball: draw with rotation and height offset, then return
+        if (this.type === 'beachBall' && this.kicked) {
+            const w = texture.width * scale;
+            const h = texture.height * scale;
+            const sidewalkH = 16 * scale;
+            const baseScreenY = Config.sceneHeight - sidewalkH - h;
+            const kickScreenY = baseScreenY - this.kickY;
+            const kickScreenX = this.x - cameraX - w / 2;
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            const cx = kickScreenX + w / 2;
+            const cy = kickScreenY + h / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate(this.kickRotation);
+            ctx.drawImage(texture, -w / 2, -h / 2, w, h);
+            ctx.restore();
+            return;
         }
 
         const w = texture.width * scale;

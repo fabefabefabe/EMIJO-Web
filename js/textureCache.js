@@ -64,7 +64,7 @@ import { sandcastle1 as sandcastle1Data, sandcastle2 as sandcastle2Data, sandcas
 import { swimmer1 as swimmer1Data, swimmer2 as swimmer2Data, swimmerPalette } from './sprites/swimmerPixels.js';
 
 // Beagle sprites
-import { beaglePalette, beagleSit, beagleRun1, beagleRun2, beagleSniff1, beagleSniff2 } from './sprites/beaglePixels.js';
+import { beaglePalette, beagleSit, beagleRun1, beagleRun2, beagleSniff1, beagleSniff2, beagleJump } from './sprites/beaglePixels.js';
 
 // Bonfire and hippie sprites
 import { bonfire1, bonfire2, bonfire3, bonfire4, bonfirePalette } from './sprites/bonfirePixels.js';
@@ -361,6 +361,7 @@ export const beagleRun1Tex = renderSprite(beagleRun1, beaglePalette);
 export const beagleRun2Tex = renderSprite(beagleRun2, beaglePalette);
 export const beagleSniff1Tex = renderSprite(beagleSniff1, beaglePalette);
 export const beagleSniff2Tex = renderSprite(beagleSniff2, beaglePalette);
+export const beagleJumpTex = renderSprite(beagleJump, beaglePalette);
 
 // --- Parents Textures ---
 export const parentsWaitingTex = renderSprite(parentsWaiting, parentsPalette);

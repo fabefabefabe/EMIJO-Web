@@ -307,7 +307,7 @@ export class GameScene {
 
             // Update beagle (runs to parents and sits)
             if (this.beagle) {
-                this.beagle.update(dt, this.player.x, [], []);
+                this.beagle.update(dt, this.player.x, [], [], []);
             }
 
             // Keep existing projectiles flying during level complete
@@ -685,7 +685,7 @@ export class GameScene {
 
         // Cull objects that are far behind the camera (save memory)
         const cullX = this.camera.offset - 200;
-        this.obstacles = this.obstacles.filter(o => o.x > cullX);
+        this.obstacles = this.obstacles.filter(o => o.alive !== false && o.x > cullX);
         this.heartPickups = this.heartPickups.filter(h => h.alive && h.x > cullX);
         this.ammoPickups = this.ammoPickups.filter(a => a.alive && a.x > cullX);
         this.dogMarkers = this.dogMarkers.filter(d => d.x > cullX);
@@ -733,7 +733,22 @@ export class GameScene {
 
         // Update beagle companion
         if (this.beagle) {
-            this.beagle.update(dt, this.player.x, this.joggers, this.skaters);
+            this.beagle.update(dt, this.player.x, this.joggers, this.skaters, this.obstacles);
+
+            // Beagle knocks down joggers/skaters while sprinting or chasing
+            if (this.beagle.state === 'sprinting' || this.beagle.state === 'chasing') {
+                const beagleAABB = this.beagle.getAABB();
+                for (const jogger of this.joggers) {
+                    if (!jogger.knocked && aabbOverlap(beagleAABB, jogger.getAABB())) {
+                        jogger.knockDown();
+                    }
+                }
+                for (const skater of this.skaters) {
+                    if (!skater.knocked && aabbOverlap(beagleAABB, skater.getAABB())) {
+                        skater.knockDown();
+                    }
+                }
+            }
         }
 
         // Collision: player vs obstacles (type-specific)
@@ -767,6 +782,16 @@ export class GameScene {
                     this.game.music.playHitSound();
                 }
                 break;
+            } else if (obstacle.type === 'beachBall') {
+                // Kick the beach ball — no damage to player
+                if (!obstacle.kicked) {
+                    obstacle.kicked = true;
+                    obstacle.kickVx = 350;
+                    obstacle.kickVy = -200;
+                    obstacle.kickY = 0;
+                    this.game.music.playHitSound();
+                }
+                continue; // player keeps running, check other obstacles
             } else {
                 // Rock, bench, cooler: normal trip
                 if (this.player.tripAndFall()) {
