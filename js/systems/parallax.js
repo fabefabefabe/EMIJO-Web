@@ -90,6 +90,20 @@ export class ParallaxSystem {
                 });
             }
         }
+
+        // Swimmers (beach only, animated people swimming in the water gap)
+        this.swimmers = [];
+        if (isBeach) {
+            const swimmerCount = 8 + Math.floor(Math.random() * 5); // 8-12 swimmers
+            for (let i = 0; i < swimmerCount; i++) {
+                this.swimmers.push({
+                    x: 200 + Math.random() * Config.levelWidth,
+                    yOffset: Math.random(), // 0-1, used to position within gap
+                    frame: Math.floor(Math.random() * 2),
+                    timer: Math.random() * 0.6, // offset animation
+                });
+            }
+        }
     }
 
     /**
@@ -121,6 +135,15 @@ export class ParallaxSystem {
             if (sc.timer >= 0.6) {
                 sc.timer -= 0.6;
                 sc.frame = (sc.frame + 1) % 2;
+            }
+        }
+
+        // Update swimmer animation
+        for (const sw of this.swimmers) {
+            sw.timer += dt;
+            if (sw.timer >= 0.6) {
+                sw.timer -= 0.6;
+                sw.frame = (sw.frame + 1) % 2;
             }
         }
     }
@@ -207,14 +230,27 @@ export class ParallaxSystem {
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(horizonTex, sunX, sunY, horizW, horizH);
 
-            // Reflection: flip vertically, draw below with transparency and wave distortion
+            // Reflection: wave-distorted vertical strips for animated water effect
             ctx.save();
             ctx.globalAlpha = 0.25;
             const reflY = seaScreenY + 4;
-            // Draw flipped
-            ctx.translate(sunX, reflY);
-            ctx.scale(1, -1);
-            ctx.drawImage(horizonTex, 0, 0, horizW, horizH);
+            const reflH = horizH * 0.7; // shorter reflection for realism
+            const stripW = 4; // width of each vertical strip
+            const waveTime = performance.now() / 1000;
+            const srcScale = horizonTex.width / horizW; // map screen→source coords
+            for (let sx = 0; sx < horizW; sx += stripW) {
+                const waveOffset = Math.sin(waveTime * 2 + sx * 0.05) * 3;
+                // Draw each strip flipped vertically with wave offset
+                ctx.save();
+                ctx.translate(sunX + sx, reflY + waveOffset + reflH);
+                ctx.scale(1, -1);
+                ctx.drawImage(horizonTex,
+                    sx * srcScale, 0,
+                    stripW * srcScale, horizonTex.height,
+                    0, 0,
+                    stripW, reflH);
+                ctx.restore();
+            }
             ctx.restore();
         } else {
             // Day: normal sun (now 18x18, bigger!)
@@ -258,9 +294,44 @@ export class ParallaxSystem {
                 sandTex = TC.sandTile;
             }
 
-            // Draw sand tiles as wider ground area (covers bush + sidewalk area)
+            // Calculate sand position
             const sandH = sandTex.height * scale;
             const sandScreenY = H - sidewalkH - sandH;
+
+            // --- Fill gap between sea and sand with extra water ---
+            const gapTop = seaScreenY + seaH; // bottom of sea tiles
+            const gapBottom = sandScreenY;    // top of sand tiles
+            if (gapBottom > gapTop) {
+                // Draw sea tiles to fill the gap (slightly different scroll factor)
+                this._drawTileLayer(ctx, seaTex, 0.15, cameraX, scale, gapTop, W);
+                // If gap is taller than one sea tile, fill remaining with solid sea color
+                const seaTileH = seaTex.height * scale;
+                if (gapBottom - gapTop > seaTileH) {
+                    const fillColor = this.timeOfDay === 'night' ? 'rgb(15,25,55)'
+                        : this.timeOfDay === 'sunset' ? 'rgb(60,80,140)' : 'rgb(60,130,200)';
+                    ctx.fillStyle = fillColor;
+                    ctx.fillRect(0, gapTop + seaTileH, W, gapBottom - gapTop - seaTileH);
+                }
+
+                // --- Swimmers in the water gap ---
+                if (TC.swimmer1Tex && TC.swimmer2Tex && this.swimmers.length > 0) {
+                    const swimScale = scale * 0.8; // smaller for distance effect
+                    ctx.imageSmoothingEnabled = false;
+                    for (const sw of this.swimmers) {
+                        const swTex = sw.frame === 0 ? TC.swimmer1Tex : TC.swimmer2Tex;
+                        const swW = swTex.width * swimScale;
+                        const swH = swTex.height * swimScale;
+                        const swX = Math.round(sw.x - cameraX * 0.12);
+                        const gapH = gapBottom - gapTop;
+                        const swY = gapTop + 8 + sw.yOffset * (gapH - swH - 16);
+                        if (swX > -swW && swX < W + swW) {
+                            ctx.drawImage(swTex, swX, swY, swW, swH);
+                        }
+                    }
+                }
+            }
+
+            // Draw sand tiles as wider ground area (covers bush + sidewalk area)
             this._drawTileLayer(ctx, sandTex, 0.45, cameraX, scale, sandScreenY, W);
 
             // --- Sandcastle kids (scrollFactor 0.35, like gardeners) ---

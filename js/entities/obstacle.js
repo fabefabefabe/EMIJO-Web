@@ -48,6 +48,9 @@ export class Obstacle {
         // --- Rock: generate random unique shape ---
         if (type === 'rock') {
             this.texture = this._generateRandomRock();
+        } else if (type === 'beachUmbrella' && TC.coloredUmbrellaTex && TC.coloredUmbrellaTex.length > 0) {
+            // Pick a random colored parasol texture
+            this.texture = TC.coloredUmbrellaTex[Math.floor(Math.random() * TC.coloredUmbrellaTex.length)];
         } else {
             this.texture = TEXTURES[type]();
         }
@@ -94,6 +97,9 @@ export class Obstacle {
             this.shakeTimer = 0;
             this.shakeDuration = 0.5;
             this.leaves = []; // not used but keeps tree-like interface
+            // Sway animation
+            this.swayTimer = Math.random() * Math.PI * 2; // random start phase
+            this.swayAngle = 0;
         }
 
         // --- Y positioning ---
@@ -109,8 +115,8 @@ export class Obstacle {
         } else if (type === 'beachUmbrella') {
             // Umbrella bottom on ground, collision at canopy top half
             this.y = groundSurface + spriteH / 2;
-            // Canopy is top ~25 rows of 50. Center at spriteH - 25*scale/2
-            this.canopyY = groundSurface + spriteH - (25 * scale) / 2;
+            // Canopy is top ~29 rows of 58. Center at spriteH - 29*scale/2
+            this.canopyY = groundSurface + spriteH - (29 * scale) / 2;
         } else {
             // Ground obstacles: center based on sprite height
             this.y = groundSurface + spriteH / 2;
@@ -199,10 +205,10 @@ export class Obstacle {
             this.leaves.push({
                 x: this.x + (Math.random() - 0.5) * 100,
                 screenY: 0, // will be set relative to canopy top
-                vy: 120 + Math.random() * 240,    // fall speed (screen pixels/s) - 3x
-                vx: (Math.random() - 0.5) * 180,  // horizontal drift - 3x
+                vy: 240 + Math.random() * 480,    // fall speed (screen pixels/s) - doubled
+                vx: (Math.random() - 0.5) * 360,  // horizontal drift - doubled
                 rotation: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 24, // 3x
+                rotSpeed: (Math.random() - 0.5) * 48, // doubled
                 alpha: 1.0,
                 startDelay: Math.random() * 0.3,  // stagger leaf drops
                 grounded: false,
@@ -264,6 +270,12 @@ export class Obstacle {
                     this.fallAnimPhase = null;
                 }
             }
+        }
+
+        // Beach umbrella sway animation (gentle oscillation)
+        if (this.type === 'beachUmbrella') {
+            this.swayTimer += dt;
+            this.swayAngle = Math.sin(this.swayTimer * 1.5) * 0.03; // ~1.7 degrees max
         }
 
         // Tree / umbrella shake animation + falling leaves
@@ -415,11 +427,24 @@ export class Obstacle {
             screenX += shakeAmount;
         }
 
-        ctx.drawImage(texture, screenX, screenY, w, h);
+        // Beach umbrella: sway rotation around pole base
+        if (this.type === 'beachUmbrella' && this.swayAngle) {
+            ctx.save();
+            // Pivot at the bottom center of the pole
+            const pivotX = screenX + w / 2;
+            const pivotY = screenY + h;
+            ctx.translate(pivotX, pivotY);
+            ctx.rotate(this.swayAngle);
+            ctx.translate(-pivotX, -pivotY);
+            ctx.drawImage(texture, screenX, screenY, w, h);
+            ctx.restore();
+        } else {
+            ctx.drawImage(texture, screenX, screenY, w, h);
+        }
 
-        // Speech bubble during pothole eyes phase
+        // Speech bubble during pothole eyes phase — deferred to separate pass for z-order
         if (this.type === 'pothole' && this.activeFallAnim && this.fallAnimPhase === 'eyes' && this._speechBubbleText) {
-            this._drawSpeechBubble(ctx, screenX + w / 2, screenY);
+            this._pendingSpeechBubble = { centerX: screenX + w / 2, topY: screenY };
         }
 
         // Tree: draw falling leaves
@@ -475,6 +500,16 @@ export class Obstacle {
         const bodyScreenY = holeScreenY - bodyH + 6;
 
         ctx.drawImage(bodyTex, bodyScreenX, bodyScreenY, bodyW, bodyH);
+    }
+
+    /**
+     * Draw deferred speech bubble (called from gameScene for correct z-order).
+     */
+    drawSpeechBubbleDeferred(ctx) {
+        if (!this._pendingSpeechBubble) return;
+        const { centerX, topY } = this._pendingSpeechBubble;
+        this._pendingSpeechBubble = null;
+        this._drawSpeechBubble(ctx, centerX, topY);
     }
 
     /**

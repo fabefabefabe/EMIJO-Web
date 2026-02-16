@@ -23,11 +23,11 @@ export class Skater {
     }
 
     /**
-     * Spawn a skater from the right edge of the screen, moving left.
+     * Spawn a skater from the left edge of the screen (behind camera), moving right.
      */
     static spawnRandom(cameraX, groundSurface) {
-        const startX = cameraX + Config.sceneWidth + 60;
-        return new Skater(startX, -1);
+        const startX = cameraX - 60;
+        return new Skater(startX, 1);
     }
 
     /**
@@ -39,7 +39,7 @@ export class Skater {
         this.knockTimer = 0;
     }
 
-    update(dt) {
+    update(dt, cameraX) {
         // Knocked down: wait 3 seconds then disappear
         if (this.knocked) {
             this.knockTimer += dt;
@@ -59,8 +59,11 @@ export class Skater {
             this.frame = (this.frame + 1) % 2;
         }
 
-        // Remove if gone off screen left
-        if (this.x < -200) {
+        // Remove if gone off screen right (skater moves left→right)
+        if (cameraX !== undefined && this.x > cameraX + Config.sceneWidth + 200) {
+            this.alive = false;
+        } else if (cameraX === undefined && this.x < -200) {
+            // Fallback for old callers
             this.alive = false;
         }
     }

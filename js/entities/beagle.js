@@ -9,6 +9,8 @@ const STATES = {
     CHASING: 'chasing',
     RETURNING: 'returning',
     OFFSCREEN: 'offscreen',
+    SPRINTING: 'sprinting',
+    LEVEL_COMPLETE: 'levelComplete',
 };
 
 export class Beagle {
@@ -47,13 +49,34 @@ export class Beagle {
         // Return speed multiplier
         this.returnSpeedMult = 1.5;
 
+        // Sprint behavior
+        this.sprintTimer = 0;
+        this.sprintDuration = 2 + Math.random() * 1.5;
+        this.timeSinceLastSprint = 0;
+        this.nextSprintAt = 20 + Math.random() * 20; // 20-40s between sprints
+
+        // Level complete target
+        this.levelCompleteTargetX = 0;
+
         this.alive = true;
+    }
+
+    /**
+     * Start level complete behavior — run to parents and sit.
+     * @param {number} targetX - X position to run to (next to parents)
+     */
+    startLevelComplete(targetX) {
+        this.levelCompleteTargetX = targetX;
+        this.state = STATES.LEVEL_COMPLETE;
+        this.frame = 0;
+        this.animTimer = 0;
     }
 
     update(dt, playerX, joggers, skaters) {
         if (!this.alive) return;
 
         this.timeSinceLastSniff += dt;
+        this.timeSinceLastSprint += dt;
 
         switch (this.state) {
             case STATES.SITTING:
@@ -74,6 +97,12 @@ export class Beagle {
             case STATES.RETURNING:
                 this._updateReturning(dt, playerX);
                 break;
+            case STATES.SPRINTING:
+                this._updateSprinting(dt, playerX);
+                break;
+            case STATES.LEVEL_COMPLETE:
+                this._updateLevelComplete(dt);
+                break;
         }
     }
 
@@ -92,8 +121,8 @@ export class Beagle {
     }
 
     _updateRunning(dt, playerX, joggers, skaters) {
-        // Target position: slightly behind player
-        const targetX = playerX - 80;
+        // Target position: close behind player
+        const targetX = playerX - 45;
         const diff = targetX - this.x;
 
         // Move toward target
@@ -117,6 +146,18 @@ export class Beagle {
             this.animTimer = 0;
             this.timeSinceLastSniff = 0;
             this.nextSniffAt = 15 + Math.random() * 15;
+            return;
+        }
+
+        // Random sprint trigger (run ahead of player then come back)
+        if (this.timeSinceLastSprint >= this.nextSprintAt && Math.random() < 0.5 * dt) {
+            this.state = STATES.SPRINTING;
+            this.sprintTimer = 0;
+            this.sprintDuration = 2 + Math.random() * 1.5;
+            this.timeSinceLastSprint = 0;
+            this.nextSprintAt = 20 + Math.random() * 20;
+            this.frame = 0;
+            this.animTimer = 0;
             return;
         }
 
@@ -177,7 +218,7 @@ export class Beagle {
             !this.chaseTarget || !this.chaseTarget.alive || this.chaseTarget.knocked) {
             this.chaseTarget = null;
             // Check if we need to return to player
-            if (playerX - this.x > 400) {
+            if (playerX - this.x > 300) {
                 this.state = STATES.RETURNING;
             } else {
                 this.state = STATES.RUNNING;
@@ -200,7 +241,7 @@ export class Beagle {
     }
 
     _updateReturning(dt, playerX) {
-        const targetX = playerX - 80;
+        const targetX = playerX - 45;
         const diff = targetX - this.x;
 
         // Run faster to catch up
@@ -214,8 +255,55 @@ export class Beagle {
         }
 
         // Close enough — switch to normal running
-        if (Math.abs(diff) < 100) {
+        if (Math.abs(diff) < 60) {
             this.state = STATES.RUNNING;
+            this.frame = 0;
+            this.animTimer = 0;
+        }
+    }
+
+    _updateSprinting(dt, playerX) {
+        this.sprintTimer += dt;
+
+        // Sprint ahead of player at 2x speed
+        const sprintTargetX = playerX + 200;
+        const diff = sprintTargetX - this.x;
+        this.x += Math.sign(diff) * Config.walkSpeed * 2.0 * dt;
+
+        // Fast run animation
+        this.animTimer += dt;
+        if (this.animTimer >= 0.08) {
+            this.animTimer -= 0.08;
+            this.frame = (this.frame + 1) % 2;
+        }
+
+        // End sprint: duration elapsed or far enough ahead
+        if (this.sprintTimer >= this.sprintDuration || this.x > playerX + 250) {
+            this.state = STATES.RETURNING;
+            this.frame = 0;
+            this.animTimer = 0;
+        }
+    }
+
+    _updateLevelComplete(dt) {
+        const diff = this.levelCompleteTargetX - this.x;
+
+        if (Math.abs(diff) > 10) {
+            // Run toward parents at 1.3x speed
+            this.x += Math.sign(diff) * Config.walkSpeed * 1.3 * dt;
+
+            // Run animation
+            this.animTimer += dt;
+            if (this.animTimer >= 0.10) {
+                this.animTimer -= 0.10;
+                this.frame = (this.frame + 1) % 2;
+            }
+        } else {
+            // Arrived — sit down
+            this.x = this.levelCompleteTargetX;
+            this.state = STATES.SITTING;
+            this.sitTimer = 99; // don't auto-transition back to running
+            this.sitDuration = 999;
             this.frame = 0;
             this.animTimer = 0;
         }
@@ -237,7 +325,7 @@ export class Beagle {
             case STATES.SNIFFING:
                 texture = this.frame === 0 ? TC.beagleSniff1Tex : TC.beagleSniff2Tex;
                 break;
-            default: // running, chasing, returning
+            default: // running, chasing, returning, sprinting, levelComplete
                 texture = this.frame === 0 ? TC.beagleRun1Tex : TC.beagleRun2Tex;
                 break;
         }

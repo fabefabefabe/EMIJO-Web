@@ -305,6 +305,11 @@ export class GameScene {
             // Keep flag animating during level complete
             this.flag.update(dt);
 
+            // Update beagle (runs to parents and sits)
+            if (this.beagle) {
+                this.beagle.update(dt, this.player.x, [], []);
+            }
+
             // Keep existing projectiles flying during level complete
             for (const proj of this.projectiles) {
                 proj.update(dt);
@@ -722,7 +727,7 @@ export class GameScene {
 
         // Update skaters
         for (const skater of this.skaters) {
-            skater.update(dt);
+            skater.update(dt, this.camera.offset);
         }
         this.skaters = this.skaters.filter(s => s.alive);
 
@@ -891,6 +896,11 @@ export class GameScene {
 
         // Draw player
         this.player.draw(ctx, camX);
+
+        // Draw pothole speech bubble on top of everything (deferred for z-order)
+        for (const obstacle of this.obstacles) {
+            obstacle.drawSpeechBubbleDeferred(ctx);
+        }
 
         // Draw floating hearts during family hug
         if (this._familyHugStarted && this._hugHearts && this._hugHearts.length > 0) {
@@ -1257,21 +1267,21 @@ export class GameScene {
             const treeScreenTop = H - sidewalkH - treeH;
             const treeScreenLeft = screenX - treeW / 2;
 
-            // Rabbit position: centered in canopy
-            const rabbitScaleFactor = 1.5;
+            // Rabbit position: centered over tree canopy (3x larger)
+            const rabbitScaleFactor = 4.5;
             const rabbitScale = scale * rabbitScaleFactor;
             const rabbitW = rabbitTex.width * rabbitScale;
             const rabbitH = rabbitTex.height * rabbitScale;
 
-            // Center horizontally in canopy, near top
+            // Center horizontally over tree, position above canopy
             const rabbitScreenX = treeScreenLeft + treeW * 0.5 - rabbitW * 0.5;
-            const rabbitScreenY = treeScreenTop + canopyH * 0.05;
+            const rabbitScreenY = treeScreenTop - rabbitH * 0.3;
 
             ctx.drawImage(rabbitTex, rabbitScreenX, rabbitScreenY, rabbitW, rabbitH);
 
             // Draw meters text on the sign area (right side of rabbit sprite)
             const metersText = TC.renderTextBlack(marker.meters + 'M');
-            const textScale = scale * 0.35;
+            const textScale = scale * 1.05;
             const textW = metersText.width * textScale;
             const textH = metersText.height * textScale;
             // Sign is on the right side of the rabbit
@@ -1473,6 +1483,11 @@ export class GameScene {
 
         // Stop auto-shoot (no new bullets)
         this.autoShootActive = false;
+
+        // Start beagle running to parents
+        if (this.beagle) {
+            this.beagle.startLevelComplete(this.parents.x + 40);
+        }
 
         // Clear invincibility / blinking
         this.player.isInvincible = false;

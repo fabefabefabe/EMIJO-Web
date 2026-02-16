@@ -60,6 +60,9 @@ import { tile as sandTileData } from './sprites/sandPixels.js';
 import { beachBall as beachBallData, beachBallPalette, beachUmbrella as beachUmbrellaData, beachUmbrellaPalette } from './sprites/beachPixels.js';
 import { sandcastle1 as sandcastle1Data, sandcastle2 as sandcastle2Data, sandcastlePalette } from './sprites/sandcastlePixels.js';
 
+// Swimmer sprites
+import { swimmer1 as swimmer1Data, swimmer2 as swimmer2Data, swimmerPalette } from './sprites/swimmerPixels.js';
+
 // Beagle sprites
 import { beaglePalette, beagleSit, beagleRun1, beagleRun2, beagleSniff1, beagleSniff2 } from './sprites/beaglePixels.js';
 
@@ -312,8 +315,31 @@ export const sandSunsetTile = renderSprite(sandTileData, Palettes.sandSunset);
 export const sandNightTile = renderSprite(sandTileData, Palettes.sandNight);
 export const beachBallTex = renderSprite(beachBallData, beachBallPalette);
 export const beachUmbrellaTex = renderSprite(beachUmbrellaData, beachUmbrellaPalette);
+
+// --- Colored Beach Umbrella Textures (random solid color per umbrella) ---
+const umbrellaColors = [
+    { main: [220,50,50], shadow: [180,30,30], highlight: [255,100,100] },   // red
+    { main: [50,120,220], shadow: [30,80,180], highlight: [100,160,255] },   // blue
+    { main: [50,180,80], shadow: [30,140,50], highlight: [100,220,130] },    // green
+    { main: [255,180,40], shadow: [220,140,20], highlight: [255,220,100] },  // orange
+    { main: [180,50,200], shadow: [140,30,160], highlight: [220,100,240] },  // purple
+    { main: [255,220,50], shadow: [220,180,30], highlight: [255,240,120] },  // yellow
+    { main: [230,80,150], shadow: [190,50,120], highlight: [255,130,190] },  // pink
+];
+export const coloredUmbrellaTex = umbrellaColors.map(c => {
+    const pal = [...beachUmbrellaPalette];
+    pal[1] = c.main;
+    pal[2] = c.shadow;
+    pal[3] = c.highlight;
+    return renderSprite(beachUmbrellaData, pal);
+});
+
 export const sandcastle1Tex = renderSprite(sandcastle1Data, sandcastlePalette);
 export const sandcastle2Tex = renderSprite(sandcastle2Data, sandcastlePalette);
+
+// --- Swimmer Textures ---
+export const swimmer1Tex = renderSprite(swimmer1Data, swimmerPalette);
+export const swimmer2Tex = renderSprite(swimmer2Data, swimmerPalette);
 
 // --- Bonfire Textures ---
 export const bonfireFrames = [

@@ -57,9 +57,10 @@ export class Player {
         // Jump requested by tap/click (consumed on next frame)
         this.jumpRequested = false;
 
-        // Progressive speed: sqrt curve, grows slower at higher levels
-        // Level 1: 0.55x, Level 6: 1.00x, Level 15: ~1.30x, Level 30: ~1.63x
-        this.levelSpeedMultiplier = 0.55 + 0.09 * Math.sqrt((level - 1) * 5);
+        // Progressive speed: sqrt curve, increases every 5 levels
+        // Levels 1-5: 0.55x, 6-10: 0.75x, 11-15: 0.83x, 26-30: 1.00x
+        const speedStep = Math.floor((level - 1) / 5);
+        this.levelSpeedMultiplier = 0.55 + 0.09 * Math.sqrt(speedStep * 5);
     }
 
     get energyFraction() {
