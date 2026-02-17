@@ -9,6 +9,7 @@ import { LevelCompleteScene } from './scenes/levelCompleteScene.js';
 import { EnterInitialsScene } from './scenes/enterInitialsScene.js';
 import { HallOfFameScene } from './scenes/hallOfFameScene.js';
 import { CongratulationsScene } from './scenes/congratulationsScene.js';
+import { MapScene } from './scenes/mapScene.js';
 import { music } from './audio/music.js';
 
 // --- Canvas Setup ---
@@ -71,6 +72,7 @@ const scenes = {
     enterInitials: new EnterInitialsScene(game),
     hallOfFame: new HallOfFameScene(game),
     congratulations: new CongratulationsScene(game),
+    map: new MapScene(game),
 };
 
 let currentScene = null;
@@ -97,6 +99,9 @@ function setScene(name) {
     } else if (name === 'congratulations') {
         scenes.congratulations = new CongratulationsScene(game);
         currentScene = scenes.congratulations;
+    } else if (name === 'map') {
+        scenes.map = new MapScene(game);
+        currentScene = scenes.map;
     } else {
         currentScene = scene;
     }

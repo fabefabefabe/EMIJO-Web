@@ -1,5 +1,5 @@
 // Level Complete Scene - victory screen with celebration
-import { Config } from '../config.js';
+import { Config, getCityForLevel } from '../config.js';
 
 import * as TC from '../textureCache.js';
 
@@ -94,9 +94,16 @@ export class LevelCompleteScene {
             this.game.setScene('congratulations');
         } else {
             // Avanzar al siguiente nivel
-            this.game.state.currentLevel = this.currentLevel + 1;
-            this.game.music.playTrack('game');
-            this.game.setScene('game');
+            const nextLevel = this.currentLevel + 1;
+            this.game.state.currentLevel = nextLevel;
+            const cityData = getCityForLevel(nextLevel);
+            if (cityData) {
+                // Show map scene before entering the new city
+                this.game.setScene('map');
+            } else {
+                this.game.music.playTrack('game');
+                this.game.setScene('game');
+            }
         }
     }
 

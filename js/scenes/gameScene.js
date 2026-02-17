@@ -670,6 +670,26 @@ export class GameScene {
                 }
             }
         }
+        // Collision: kicked beach balls vs joggers/skaters
+        for (const obstacle of this.obstacles) {
+            if (obstacle.type !== 'beachBall' || !obstacle.kicked) continue;
+            const ballAABB = obstacle.getAABB();
+            for (const jogger of this.joggers) {
+                if (jogger.knocked) continue;
+                if (aabbOverlap(ballAABB, jogger.getAABB())) {
+                    jogger.knockDown();
+                    this.game.music.playDestroySound();
+                }
+            }
+            for (const skater of this.skaters) {
+                if (skater.knocked) continue;
+                if (aabbOverlap(ballAABB, skater.getAABB())) {
+                    skater.knockDown();
+                    this.game.music.playDestroySound();
+                }
+            }
+        }
+
         // Remove destroyed obstacles
         this.obstacles = this.obstacles.filter(o => !o.destroyed);
 
@@ -1493,14 +1513,14 @@ export class GameScene {
 
             ctx.drawImage(rabbitTex, rabbitScreenX, rabbitScreenY, rabbitW, rabbitH);
 
-            // Draw meters text on the sign area (right side of rabbit sprite)
+            // Draw meters text on the sign area (ABOVE the rabbit)
             const metersText = TC.renderTextBlack(marker.meters + 'M');
             const textScale = scale * 1.05;
             const textW = metersText.width * textScale;
             const textH = metersText.height * textScale;
-            // Sign is on the right side of the rabbit
-            const signCenterX = rabbitScreenX + rabbitW * 0.82;
-            const signCenterY = rabbitScreenY + rabbitH * 0.50;
+            // Sign is the top 6 rows of 20 (30% height), centered horizontally
+            const signCenterX = rabbitScreenX + rabbitW * 0.5;
+            const signCenterY = rabbitScreenY + rabbitH * 0.15;
             const textX = signCenterX - textW / 2;
             const textY = signCenterY - textH / 2;
 

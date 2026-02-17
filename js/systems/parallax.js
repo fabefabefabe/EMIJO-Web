@@ -261,11 +261,41 @@ export class ParallaxSystem {
             const sunBaseY = 30;
             const sunOffsetX = Math.round(cameraX * 0.02);
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(sunTex, Math.round(sunBaseX - sunOffsetX), sunBaseY, sunW, sunH);
+            const daySunDrawX = Math.round(sunBaseX - sunOffsetX);
+            ctx.drawImage(sunTex, daySunDrawX, sunBaseY, sunW, sunH);
+            // Store for reflection after sea
+            this._daySunTex = sunTex;
+            this._daySunX = daySunDrawX;
+            this._daySunW = sunW;
+            this._daySunH = sunH;
         }
 
         // --- Layer 3: Sea tiles (scrollFactor 0.10, animated) ---
         this._drawTileLayer(ctx, seaTex, 0.10, cameraX, scale, seaScreenY, W);
+
+        // --- Day sun reflection on water (wave-distorted) ---
+        if (this.timeOfDay === 'day' && this._daySunTex) {
+            ctx.save();
+            ctx.globalAlpha = 0.2;
+            const reflY = seaScreenY + 4;
+            const reflH = this._daySunH * 0.6;
+            const stripW = 4;
+            const waveTime = performance.now() / 1000;
+            const srcScale2 = this._daySunTex.width / this._daySunW;
+            for (let sx = 0; sx < this._daySunW; sx += stripW) {
+                const waveOffset = Math.sin(waveTime * 2 + sx * 0.05) * 3;
+                ctx.save();
+                ctx.translate(this._daySunX + sx, reflY + waveOffset + reflH);
+                ctx.scale(1, -1);
+                ctx.drawImage(this._daySunTex,
+                    sx * srcScale2, 0,
+                    stripW * srcScale2, this._daySunTex.height,
+                    0, 0,
+                    stripW, reflH);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
 
         // --- Layer 4: Boats on horizon (DESPUÉS del mar para que se vean) ---
         const boatTex = TC.boatTexture;
@@ -278,6 +308,27 @@ export class ParallaxSystem {
             const bx = Math.round(boat.x - cameraX * 0.10);
             if (bx + boatW > 0 && bx < W) {
                 ctx.drawImage(boatTex, bx, boatScreenY, boatW, boatH);
+                // Boat reflection on water
+                ctx.save();
+                ctx.globalAlpha = 0.15;
+                const boatReflY = seaScreenY + 4;
+                const boatReflH = boatH * 0.5;
+                const bStripW = 3;
+                const bWaveTime = performance.now() / 1000;
+                const bSrcScale = boatTex.width / boatW;
+                for (let bsx = 0; bsx < boatW; bsx += bStripW) {
+                    const waveOff = Math.sin(bWaveTime * 2 + bsx * 0.07) * 2;
+                    ctx.save();
+                    ctx.translate(bx + bsx, boatReflY + waveOff + boatReflH);
+                    ctx.scale(1, -1);
+                    ctx.drawImage(boatTex,
+                        bsx * bSrcScale, 0,
+                        bStripW * bSrcScale, boatTex.height,
+                        0, 0,
+                        bStripW, boatReflH);
+                    ctx.restore();
+                }
+                ctx.restore();
             }
         }
 

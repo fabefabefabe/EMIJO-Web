@@ -366,9 +366,10 @@ export class Obstacle {
             return { x: this.x, y: this.y, hw: 0, hh: 0 };
         }
 
-        // Kicked beach ball has no collision
+        // Kicked beach ball: real AABB for hitting joggers/skaters (no player collision)
         if (this.type === 'beachBall' && this.kicked) {
-            return { x: this.x, y: this.y, hw: 0, hh: 0 };
+            const spriteH = this.texture.height * scale;
+            return { x: this.x, y: this.groundSurface + spriteH / 2 + this.kickY, hw: 6 * scale, hh: 6 * scale };
         }
 
         // Rabbit-marker tree has no collision (player walks through)
@@ -470,7 +471,7 @@ export class Obstacle {
             const shadowW = w * 0.85;
             const shadowH = Math.max(4, w * 0.15);
             const shadowX = screenX + w / 2 - shadowW / 2 + 3;
-            const shadowY = screenY + h - shadowH * 0.3;
+            const shadowY = screenY + h - shadowH * 0.3 + 3;
             ctx.save();
             ctx.globalAlpha = 0.15;
             ctx.fillStyle = '#000000';

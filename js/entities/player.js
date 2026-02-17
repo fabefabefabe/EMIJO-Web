@@ -442,7 +442,7 @@ export class Player {
             ctx.globalAlpha = shadowAlpha;
             ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.ellipse(screenX, feetY - 2, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
+            ctx.ellipse(screenX, feetY + 1, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
