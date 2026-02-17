@@ -471,7 +471,7 @@ export class Obstacle {
             const shadowW = w * 0.85;
             const shadowH = Math.max(4, w * 0.15);
             const shadowX = screenX + w / 2 - shadowW / 2 + 3;
-            const shadowY = screenY + h - shadowH * 0.3 + 3;
+            const shadowY = screenY + h - shadowH * 0.3 + 6;
             ctx.save();
             ctx.globalAlpha = 0.15;
             ctx.fillStyle = '#000000';

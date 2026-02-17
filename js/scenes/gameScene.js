@@ -1020,16 +1020,14 @@ export class GameScene {
         // Draw dogs at every 100m marker (AFTER obstacles so dog appears in front of tree)
         this._drawDogMarkers(ctx, camX);
 
-        // Draw joggers (with tree/umbrella shadow overlay)
+        // Draw joggers
         for (const jogger of this.joggers) {
             jogger.draw(ctx, camX);
-            this._drawTreeShadowOverlay(ctx, camX, jogger);
         }
 
-        // Draw skaters (with tree/umbrella shadow overlay)
+        // Draw skaters
         for (const skater of this.skaters) {
             skater.draw(ctx, camX);
-            this._drawTreeShadowOverlay(ctx, camX, skater);
         }
 
         // Draw bonfires (with glow and sparks)
@@ -1061,7 +1059,6 @@ export class GameScene {
 
         // Draw player
         this.player.draw(ctx, camX, this.timeOfDay);
-        this._drawTreeShadowOverlay(ctx, camX, this.player);
 
         // Draw "GAUCHO POWER" floating text above player
         if (this._gauchoPowerTextTimer > 0 && this._gauchoPowerTextTex) {
@@ -1564,65 +1561,6 @@ export class GameScene {
      * Draw a dark shadow overlay on an entity if it's under a tree or umbrella canopy.
      * Entity must have .x (world coords) and either .getCurrentTexture() or sprite dimensions.
      */
-    _drawTreeShadowOverlay(ctx, cameraX, entity) {
-        if (this.timeOfDay !== 'day') return; // shadows only during daytime
-        if (entity.knocked) return; // skip knocked NPCs
-
-        const scale = Config.pixelScale;
-        const sidewalkH = 16 * scale;
-        const entityWorldX = entity.x;
-
-        // Check all tree/umbrella obstacles
-        for (const obs of this.obstacles) {
-            if (obs.type !== 'tree' && obs.type !== 'beachUmbrella') continue;
-
-            // Canopy horizontal range (world coords, centered on obs.x)
-            const obsTex = obs.texture;
-            const obsW = obsTex.width * scale;
-            const canopyHalfW = obsW * 0.45; // canopy covers ~90% of tree width
-
-            if (entityWorldX >= obs.x - canopyHalfW && entityWorldX <= obs.x + canopyHalfW) {
-                // Entity is under canopy — draw shadow overlay
-                // Get entity screen bounds
-                let tex, eScale, eW, eH, eScreenX, eScreenY;
-
-                if (entity.getCurrentTexture) {
-                    // Player
-                    tex = entity.getCurrentTexture();
-                    eScale = scale;
-                    eW = tex.width * eScale;
-                    eH = tex.height * eScale;
-                    eScreenX = entityWorldX - cameraX - eW / 2;
-                    eScreenY = Config.sceneHeight - sidewalkH - eH - (entity.y - Config.groundSurface);
-                } else if (entity.scaleFactor) {
-                    // Skater (has scaleFactor)
-                    tex = TC.skaterFrames ? TC.skaterFrames[0] : null;
-                    eScale = scale * entity.scaleFactor;
-                    if (!tex) break;
-                    eW = tex.width * eScale;
-                    eH = tex.height * eScale;
-                    eScreenX = entityWorldX - cameraX - eW / 2;
-                    eScreenY = Config.sceneHeight - sidewalkH - eH - (entity.y - Config.groundSurface);
-                } else {
-                    // Jogger
-                    tex = TC.joggerRunFrames ? TC.joggerRunFrames[0] : null;
-                    eScale = scale;
-                    if (!tex) break;
-                    eW = tex.width * eScale;
-                    eH = tex.height * eScale;
-                    eScreenX = entityWorldX - cameraX - eW / 2;
-                    eScreenY = Config.sceneHeight - sidewalkH - eH;
-                }
-
-                ctx.save();
-                ctx.globalAlpha = 0.25;
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(eScreenX, eScreenY, eW, eH);
-                ctx.restore();
-                break; // Only need one shadow
-            }
-        }
-    }
 
     _drawWelcomeSigns(ctx, cameraX) {
         if (this.welcomeSigns.length === 0) return;

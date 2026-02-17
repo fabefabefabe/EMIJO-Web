@@ -442,46 +442,74 @@ export class Player {
             ctx.globalAlpha = shadowAlpha;
             ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.ellipse(screenX, feetY + 1, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
+            ctx.ellipse(screenX, feetY + 4, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
 
-        ctx.save();
-        ctx.globalAlpha = this.alpha;
-        ctx.imageSmoothingEnabled = false;
+        const isGauchoPower = (this.gauchoPowerPhase === 'active' || this.gauchoPowerPhase === 'windDown');
 
-        if (!this.facingRight) {
-            ctx.translate(drawX + w, screenY);
-            ctx.scale(-1, 1);
-            ctx.drawImage(texture, 0, 0, w, h);
-        } else {
-            ctx.drawImage(texture, drawX, screenY, w, h);
-        }
+        if (isGauchoPower) {
+            // Draw sprite + tint on offscreen canvas so source-atop only affects sprite pixels
+            if (!this._tintCanvas) {
+                this._tintCanvas = document.createElement('canvas');
+                this._tintCtx = this._tintCanvas.getContext('2d');
+            }
+            const tc = this._tintCanvas;
+            const tctx = this._tintCtx;
+            tc.width = w;
+            tc.height = h;
+            tctx.clearRect(0, 0, w, h);
+            tctx.imageSmoothingEnabled = false;
 
-        // Color cycling during Gaucho Power (Mario star effect)
-        if (this.gauchoPowerPhase === 'active' || this.gauchoPowerPhase === 'windDown') {
-            ctx.globalCompositeOperation = 'source-atop';
+            // Draw sprite onto offscreen canvas
+            if (!this.facingRight) {
+                tctx.save();
+                tctx.translate(w, 0);
+                tctx.scale(-1, 1);
+                tctx.drawImage(texture, 0, 0, w, h);
+                tctx.restore();
+            } else {
+                tctx.drawImage(texture, 0, 0, w, h);
+            }
+
+            // Apply color tint only to opaque pixels (source-atop)
             const hue = this.gauchoPowerHue;
             let tintAlpha = 0.5;
             if (this.gauchoPowerPhase === 'windDown') {
-                // Gradually reduce tint intensity
                 const drinkDur = Config.gauchoPowerDrinkDuration;
                 const totalDur = Config.gauchoPowerDuration + drinkDur;
                 const windDownStart = totalDur - Config.gauchoPowerWindDown;
                 const windProgress = (this.gauchoPowerTimer - windDownStart) / Config.gauchoPowerWindDown;
                 tintAlpha = 0.5 * (1 - Math.min(1, windProgress));
             }
-            ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${tintAlpha})`;
-            if (!this.facingRight) {
-                ctx.fillRect(0, 0, w, h);
-            } else {
-                ctx.fillRect(drawX, screenY, w, h);
-            }
-            ctx.globalCompositeOperation = 'source-over';
-        }
+            tctx.globalCompositeOperation = 'source-atop';
+            tctx.fillStyle = `hsla(${hue}, 100%, 60%, ${tintAlpha})`;
+            tctx.fillRect(0, 0, w, h);
+            tctx.globalCompositeOperation = 'source-over';
 
-        ctx.restore();
+            // Draw the tinted result onto main canvas
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(tc, drawX, screenY, w, h);
+            ctx.restore();
+        } else {
+            // Normal drawing (no gaucho power)
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.imageSmoothingEnabled = false;
+
+            if (!this.facingRight) {
+                ctx.translate(drawX + w, screenY);
+                ctx.scale(-1, 1);
+                ctx.drawImage(texture, 0, 0, w, h);
+            } else {
+                ctx.drawImage(texture, drawX, screenY, w, h);
+            }
+
+            ctx.restore();
+        }
 
         // Draw mate sprite next to player during drinking phase
         if (this.state === STATES.DRINKING_MATE && matePickupTex) {
