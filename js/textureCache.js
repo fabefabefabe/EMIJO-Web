@@ -66,6 +66,9 @@ import { swimmer1 as swimmer1Data, swimmer2 as swimmer2Data, swimmerPalette } fr
 // Beagle sprites
 import { beaglePalette, beagleSit, beagleRun1, beagleRun2, beagleSniff1, beagleSniff2, beagleJump } from './sprites/beaglePixels.js';
 
+// Mate pickup sprite
+import { matePalette, matePickup as matePickupData } from './sprites/matePixels.js';
+
 // Bonfire and hippie sprites
 import { bonfire1, bonfire2, bonfire3, bonfire4, bonfirePalette } from './sprites/bonfirePixels.js';
 import { hippie1 as hippie1Data, hippie2 as hippie2Data, hippiePalette } from './sprites/hippiePixels.js';
@@ -362,6 +365,9 @@ export const beagleRun2Tex = renderSprite(beagleRun2, beaglePalette);
 export const beagleSniff1Tex = renderSprite(beagleSniff1, beaglePalette);
 export const beagleSniff2Tex = renderSprite(beagleSniff2, beaglePalette);
 export const beagleJumpTex = renderSprite(beagleJump, beaglePalette);
+
+// --- Mate Pickup Texture ---
+export const matePickupTex = renderSprite(matePickupData, matePalette);
 
 // --- Parents Textures ---
 export const parentsWaitingTex = renderSprite(parentsWaiting, parentsPalette);

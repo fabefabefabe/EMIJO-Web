@@ -503,6 +503,44 @@ export class MusicSystem {
         osc.stop(this.audioCtx.currentTime + 0.15);
     }
 
+    playGauchoPowerSound() {
+        if (!this.audioCtx || this.isMuted) return;
+
+        // Epic ascending fanfare — longer and more dramatic than normal pickup
+        // C4-E4-G4-C5-E5-G5-C6
+        const notes = [
+            this.notes.C4, this.notes.E4, this.notes.G4,
+            this.notes.C5, this.notes.E5, this.notes.G5, this.notes.C6
+        ];
+        const dur = 0.05;
+
+        notes.forEach((freq, i) => {
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+
+            osc.type = 'square';
+            osc.frequency.value = freq;
+
+            const startTime = this.audioCtx.currentTime + i * dur;
+            gain.gain.setValueAtTime(0.15, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur * 2);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+
+            osc.start(startTime);
+            osc.stop(startTime + dur * 2);
+        });
+    }
+
+    /**
+     * Change music playback speed by adjusting beatDuration.
+     * @param {number} mult - Speed multiplier (1.0 = normal, 1.5 = 50% faster)
+     */
+    setSpeedMultiplier(mult) {
+        this.beatDuration = (60 / this.bpm) / mult;
+    }
+
     playPotholeSound() {
         if (!this.audioCtx || this.isMuted) return;
 

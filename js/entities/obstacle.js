@@ -109,6 +109,7 @@ export class Obstacle {
             this.kickVy = 0;
             this.kickY = 0; // height offset from ground
             this.kickRotation = 0;
+            this.kickLifeTimer = 0;
         }
 
         this.alive = true;
@@ -330,9 +331,10 @@ export class Obstacle {
 
         // Beach ball kick physics
         if (this.type === 'beachBall' && this.kicked) {
-            this.kickVx *= 0.995; // slight air resistance
+            this.kickLifeTimer += dt;
+            this.kickVx *= Math.pow(0.99, dt * 60); // air resistance (frame-rate independent)
             this.x += this.kickVx * dt;
-            this.kickVy += 600 * dt; // gravity
+            this.kickVy += 400 * dt; // gravity (lighter ball = less gravity)
             this.kickY -= this.kickVy * dt;
             this.kickRotation += 8 * dt; // spin
 
@@ -340,13 +342,13 @@ export class Obstacle {
             if (this.kickY <= 0) {
                 this.kickY = 0;
                 this.kickVy = -this.kickVy * 0.5; // bounce with energy loss
-                if (Math.abs(this.kickVy) < 30) {
+                if (Math.abs(this.kickVy) < 20) {
                     this.kickVy = 0; // stop bouncing
                 }
             }
 
-            // Mark dead when slowed down enough
-            if (this.kickVx < 10) {
+            // Mark dead when slowed or after 3 seconds
+            if (this.kickVx < 5 || this.kickLifeTimer > 3) {
                 this.alive = false;
             }
         }

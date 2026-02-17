@@ -17,6 +17,7 @@ import { Jogger } from '../entities/jogger.js';
 import { Skater } from '../entities/skater.js';
 import { HallOfFame } from '../systems/hallOfFame.js';
 import { Beagle } from '../entities/beagle.js';
+import { MatePickup } from '../entities/matePickup.js';
 
 export class GameScene {
     constructor(game) {
@@ -136,6 +137,10 @@ export class GameScene {
             marker.treeObstacle = treeObs;
         }
 
+        // Mate pickups (Gaucho Power) — spawned before tree-shift
+        this.matePickups = [];
+        this._spawnMatePickups();
+
         // Shift powerups away from trees
         this._shiftPickupsAwayFromTrees();
 
@@ -193,6 +198,12 @@ export class GameScene {
             this.beagle = new Beagle(this.player.x - 100, groundSurface);
         }
 
+        // Mate pickups (Gaucho Power) - state only, spawning done earlier
+        this._gauchoPowerWasActive = false;
+        this._gauchoPowerPrevPhase = 'none';
+        this._gauchoPowerTextTimer = 0;
+        this._gauchoPowerTextTex = null;
+
         // Tutorial: only on level 1, first time playing
         this._tutorial = null;
         if (this.currentLevel === 1 && !localStorage.getItem('emijo_tutorial_seen')) {
@@ -242,6 +253,20 @@ export class GameScene {
     }
 
     /**
+     * Spawn mate pickups at intervals (low probability per interval).
+     */
+    _spawnMatePickups() {
+        const intervalPx = Config.mateSpawnIntervalMeters / Config.metersPerPixel;
+        // Start from 2x interval (so mate doesn't appear too early)
+        for (let x = intervalPx * 2; x < this.flag.x; x += intervalPx) {
+            if (Math.random() < Config.mateSpawnChance) {
+                const y = Config.groundSurface; // on the ground (easy to grab)
+                this.matePickups.push(new MatePickup(x, y));
+            }
+        }
+    }
+
+    /**
      * Shift hearts and ammo pickups so they don't overlap with tree/umbrella obstacles.
      */
     _shiftPickupsAwayFromTrees() {
@@ -249,7 +274,7 @@ export class GameScene {
             o.type === 'tree' || o.type === 'beachUmbrella'
         );
         const treeHalfWidth = 90; // wider detection radius around tree/umbrella
-        for (const pickup of [...this.heartPickups, ...this.ammoPickups]) {
+        for (const pickup of [...this.heartPickups, ...this.ammoPickups, ...this.matePickups]) {
             for (const tree of treeObstacles) {
                 if (Math.abs(pickup.x - tree.x) < treeHalfWidth) {
                     pickup.x = tree.x + treeHalfWidth + 50;
@@ -680,6 +705,63 @@ export class GameScene {
             }
         }
 
+        // Update mate pickups
+        for (const mate of this.matePickups) {
+            mate.update(dt);
+        }
+        this.matePickups = this.matePickups.filter(m => m.alive);
+
+        // Collision: player vs mate pickups → activate Gaucho Power
+        if (!this.player.gauchoPowerActive) {
+            const playerAABBForMate = this.player.getAABB();
+            for (const mate of this.matePickups) {
+                if (!mate.alive) continue;
+                if (aabbOverlap(playerAABBForMate, mate.getAABB())) {
+                    if (mate.collect()) {
+                        this.player.startDrinkingMate();
+                        this.game.music.playGauchoPowerSound();
+                        // Speed up music
+                        this.game.music.setSpeedMultiplier(1.5);
+                        // Remove remaining mates
+                        for (const m of this.matePickups) m.alive = false;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Monitor Gaucho Power state for music speed and floating text
+        if (this._gauchoPowerWasActive && !this.player.gauchoPowerActive) {
+            // Power just ended — restore music speed
+            this.game.music.setSpeedMultiplier(1.0);
+            this._gauchoPowerWasActive = false;
+            this._gauchoPowerPrevPhase = 'none';
+        }
+        if (this.player.gauchoPowerActive) {
+            // Detect phase transition to 'active' → trigger floating text
+            if (this._gauchoPowerPrevPhase === 'drinking' && this.player.gauchoPowerPhase === 'active') {
+                this._gauchoPowerTextTimer = 2.0;
+                this._gauchoPowerTextTex = TC.renderText('GAUCHO POWER');
+            }
+            this._gauchoPowerPrevPhase = this.player.gauchoPowerPhase;
+            this._gauchoPowerWasActive = true;
+
+            // Wind-down: gradually slow music back to normal
+            if (this.player.gauchoPowerPhase === 'windDown') {
+                const drinkDur = Config.gauchoPowerDrinkDuration;
+                const totalDur = Config.gauchoPowerDuration + drinkDur;
+                const windDownStart = totalDur - Config.gauchoPowerWindDown;
+                const windProgress = (this.player.gauchoPowerTimer - windDownStart) / Config.gauchoPowerWindDown;
+                const t = Math.min(1, windProgress);
+                this.game.music.setSpeedMultiplier(1.5 - 0.5 * t);
+            }
+        }
+
+        // Update "GAUCHO POWER" floating text timer
+        if (this._gauchoPowerTextTimer > 0) {
+            this._gauchoPowerTextTimer -= dt;
+        }
+
         // Actualizar metros recorridos
         this.metersWalked = Math.floor(this.player.x * Config.metersPerPixel);
 
@@ -688,6 +770,7 @@ export class GameScene {
         this.obstacles = this.obstacles.filter(o => o.alive !== false && o.x > cullX);
         this.heartPickups = this.heartPickups.filter(h => h.alive && h.x > cullX);
         this.ammoPickups = this.ammoPickups.filter(a => a.alive && a.x > cullX);
+        this.matePickups = this.matePickups.filter(m => m.alive && m.x > cullX);
         this.dogMarkers = this.dogMarkers.filter(d => d.x > cullX);
         this.lightPoles = this.lightPoles.filter(p => p.x > cullX);
         this.joggers = this.joggers.filter(j => j.alive && j.x > cullX);
@@ -786,10 +869,11 @@ export class GameScene {
                 // Kick the beach ball — no damage to player
                 if (!obstacle.kicked) {
                     obstacle.kicked = true;
-                    obstacle.kickVx = 350;
-                    obstacle.kickVy = -200;
+                    obstacle.kickVx = 400;
+                    obstacle.kickVy = -250;
                     obstacle.kickY = 0;
-                    this.game.music.playHitSound();
+                    obstacle.kickLifeTimer = 0;
+                    this.game.music.playKickSound();
                 }
                 continue; // player keeps running, check other obstacles
             } else {
@@ -914,6 +998,11 @@ export class GameScene {
             bird.draw(ctx, camX);
         }
 
+        // Draw mate pickups (before player, on ground level)
+        for (const mate of this.matePickups) {
+            mate.draw(ctx, camX);
+        }
+
         // Draw beagle companion
         if (this.beagle) {
             this.beagle.draw(ctx, camX, this.timeOfDay);
@@ -921,6 +1010,36 @@ export class GameScene {
 
         // Draw player
         this.player.draw(ctx, camX, this.timeOfDay);
+
+        // Draw "GAUCHO POWER" floating text above player
+        if (this._gauchoPowerTextTimer > 0 && this._gauchoPowerTextTex) {
+            const gpAlpha = Math.min(1, this._gauchoPowerTextTimer / 1.5);
+            const floatY = (2 - this._gauchoPowerTextTimer) * 30; // rises 30px over 2s
+            const textScale = Config.pixelScale * 0.8;
+            const tw = this._gauchoPowerTextTex.width * textScale;
+            const th = this._gauchoPowerTextTex.height * textScale;
+            const px = this.player.x - camX - tw / 2;
+            const scale = Config.pixelScale;
+            const sidewalkH = 16 * scale;
+            const playerTexture = this.player.getCurrentTexture();
+            const spriteH = playerTexture.height * scale;
+            const playerScreenY = H - sidewalkH - spriteH - (this.player.y - Config.groundSurface);
+            const py = playerScreenY - 40 - floatY;
+
+            ctx.save();
+            ctx.globalAlpha = gpAlpha;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(this._gauchoPowerTextTex, px, py, tw, th);
+
+            // Add colored glow effect behind text
+            ctx.globalCompositeOperation = 'source-atop';
+            const hue = this.player.gauchoPowerHue || 0;
+            ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.4)`;
+            ctx.fillRect(px, py, tw, th);
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.restore();
+        }
 
         // Draw pothole speech bubble on top of everything (deferred for z-order)
         for (const obstacle of this.obstacles) {
@@ -1065,6 +1184,74 @@ export class GameScene {
             const g = Math.round(215 * progress);
             ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
             ctx.fillRect(barX, barY, barW * progress, barH);
+        }
+
+        // Draw Gaucho Power countdown HUD (when active or winding down)
+        const gpPhase = this.player.gauchoPowerPhase;
+        if (gpPhase === 'active' || gpPhase === 'windDown' || gpPhase === 'drinking') {
+            const drinkDur = Config.gauchoPowerDrinkDuration;
+            const totalDur = Config.gauchoPowerDuration + drinkDur;
+            const remaining = Math.max(0, totalDur - this.player.gauchoPowerTimer);
+            const elapsed = this.player.gauchoPowerTimer;
+
+            // Mate icon
+            const mateIcon = TC.matePickupTex;
+            const mateIconScale = scale * 0.8;
+            const mateIconW = mateIcon.width * mateIconScale;
+            const mateIconH = mateIcon.height * mateIconScale;
+
+            // Position: below auto-shoot if active, or below music icon
+            let gpBaseY;
+            if (this.autoShootActive) {
+                // Below auto-shoot bar
+                const ammoIconY = iconY + iconH + 10;
+                const ammoIconH2 = 10 * scale * 0.8; // approx ammo icon height
+                gpBaseY = ammoIconY + ammoIconH2 + 14;
+            } else {
+                gpBaseY = iconY + iconH + 10;
+            }
+
+            const mateIconX = W - margin - mateIconW;
+            const mateIconY = gpBaseY;
+
+            // Mate icon with color cycling tint
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(mateIcon, mateIconX, mateIconY, mateIconW, mateIconH);
+
+            if (gpPhase === 'active' || gpPhase === 'windDown') {
+                ctx.globalCompositeOperation = 'source-atop';
+                const hue = this.player.gauchoPowerHue || 0;
+                ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.4)`;
+                ctx.fillRect(mateIconX, mateIconY, mateIconW, mateIconH);
+                ctx.globalCompositeOperation = 'source-over';
+            }
+            ctx.restore();
+
+            // Countdown text
+            const secs = Math.ceil(remaining);
+            const gpCountText = TC.renderText(secs + 'S');
+            const gpCountScale = scale * 0.6;
+            const gpCountW = gpCountText.width * gpCountScale;
+            const gpCountH = gpCountText.height * gpCountScale;
+            const gpCountX = mateIconX - gpCountW - 6;
+            const gpCountY = mateIconY + (mateIconH - gpCountH) / 2;
+            ctx.drawImage(gpCountText, gpCountX, gpCountY, gpCountW, gpCountH);
+
+            // Progress bar below
+            const gpBarW = mateIconW + gpCountW + 6;
+            const gpBarH = 4;
+            const gpBarX = gpCountX;
+            const gpBarY = mateIconY + mateIconH + 4;
+            const gpProgress = remaining / totalDur;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(gpBarX, gpBarY, gpBarW, gpBarH);
+            // Bar fill: green → yellow → red
+            const gpR = Math.round(255 * (1 - gpProgress));
+            const gpG = Math.round(255 * gpProgress);
+            ctx.fillStyle = `rgb(${gpR}, ${gpG}, 0)`;
+            ctx.fillRect(gpBarX, gpBarY, gpBarW * gpProgress, gpBarH);
         }
     }
 
@@ -1511,6 +1698,18 @@ export class GameScene {
         // Stop auto-shoot (no new bullets)
         this.autoShootActive = false;
 
+        // Stop gaucho power
+        if (this.player.gauchoPowerActive) {
+            this.player.gauchoPowerActive = false;
+            this.player.gauchoPowerPhase = 'none';
+            this.player.gauchoPowerColorTimer = 0;
+            this.player.gauchoPowerHue = 0;
+            this.player.levelSpeedMultiplier = this.player.baseSpeedMultiplier;
+            this.game.music.setSpeedMultiplier(1.0);
+            this._gauchoPowerWasActive = false;
+            this._gauchoPowerTextTimer = 0;
+        }
+
         // Start beagle running to parents
         if (this.beagle) {
             this.beagle.startLevelComplete(this.parents.x + 40);
@@ -1522,9 +1721,10 @@ export class GameScene {
         this.player.blinkTimer = 0;
         this.player.alpha = 1.0;
 
-        // If player is in a trip/pothole state, force back to walking
+        // If player is in a trip/pothole/drinking state, force back to walking
         if (this.player.state === 'tripping' || this.player.state === 'lying' ||
-            this.player.state === 'gettingUp' || this.player.state === 'fallingInHole') {
+            this.player.state === 'gettingUp' || this.player.state === 'fallingInHole' ||
+            this.player.state === 'drinkingMate') {
             this.player.state = 'walking';
             this.player.visible = true;
             this.player.vx = 0;

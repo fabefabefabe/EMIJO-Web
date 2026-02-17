@@ -64,6 +64,14 @@ export const Config = {
     autoShootDuration: 10,    // seconds of auto-fire when pickup collected
     autoShootInterval: 0.4,   // seconds between auto-fire shots
 
+    // Gaucho Power (mate pickup)
+    gauchoPowerDuration: 10,        // active power duration in seconds
+    gauchoPowerDrinkDuration: 1.5,  // pause to drink mate
+    gauchoPowerWindDown: 2.0,       // last 2s: smooth deceleration
+    gauchoPowerSpeedMult: 2.0,      // double speed
+    mateSpawnIntervalMeters: 500,   // one spawn attempt every 500m
+    mateSpawnChance: 0.25,          // 25% chance per interval
+
     // Max level
     maxLevel: 90,
 

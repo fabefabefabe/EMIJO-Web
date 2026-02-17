@@ -1,6 +1,6 @@
-// Player Entity - auto-runner with jump, trip/fall, health, invincibility
+// Player Entity - auto-runner with jump, trip/fall, health, invincibility, gaucho power
 import { Config } from '../config.js';
-import { getCharacterTextures } from '../textureCache.js';
+import { getCharacterTextures, matePickupTex } from '../textureCache.js';
 import { drawSprite } from '../renderer.js';
 
 const STATES = {
@@ -10,6 +10,7 @@ const STATES = {
     LYING: 'lying',
     GETTING_UP: 'gettingUp',
     FALLING_IN_HOLE: 'fallingInHole',
+    DRINKING_MATE: 'drinkingMate',
 };
 
 export class Player {
@@ -61,6 +62,14 @@ export class Player {
         // Levels 1-5: 0.55x, 6-10: 0.75x, 11-15: 0.83x, 26-30: 1.00x
         const speedStep = Math.floor((level - 1) / 5);
         this.levelSpeedMultiplier = 0.55 + 0.09 * Math.sqrt(speedStep * 5);
+
+        // Gaucho Power (mate powerup)
+        this.gauchoPowerActive = false;
+        this.gauchoPowerTimer = 0;
+        this.gauchoPowerPhase = 'none'; // 'none', 'drinking', 'active', 'windDown'
+        this.gauchoPowerColorTimer = 0;
+        this.gauchoPowerHue = 0;
+        this.baseSpeedMultiplier = this.levelSpeedMultiplier;
     }
 
     get energyFraction() {
@@ -72,6 +81,22 @@ export class Player {
      */
     requestJump() {
         this.jumpRequested = true;
+    }
+
+    /**
+     * Start drinking mate — triggers Gaucho Power sequence.
+     * @returns {boolean} true if started successfully
+     */
+    startDrinkingMate() {
+        if (this.gauchoPowerPhase !== 'none') return false;
+        this.state = STATES.DRINKING_MATE;
+        this.vx = 0;
+        this.vy = 0;
+        this.gauchoPowerActive = true;
+        this.gauchoPowerTimer = 0;
+        this.gauchoPowerPhase = 'drinking';
+        this.jumpRequested = false;
+        return true;
     }
 
     /**
@@ -89,18 +114,27 @@ export class Player {
      * Main update - called every frame.
      */
     update(dt, input, cameraX = 0) {
-        // Update invincibility
-        this._updateInvincibility(dt);
+        // Update invincibility (skip normal invincibility decay during gaucho power)
+        if (!this.gauchoPowerActive) {
+            this._updateInvincibility(dt);
+        }
 
         // Update trip animation
         if (this.state === STATES.FALLING_IN_HOLE) {
             this._updatePotholeSequence(dt);
         } else if (this.state === STATES.TRIPPING || this.state === STATES.LYING || this.state === STATES.GETTING_UP) {
             this._updateTripSequence(dt);
+        } else if (this.state === STATES.DRINKING_MATE) {
+            // Drinking mate: player is stopped, no input processed
+            this.vx = 0;
+            this.jumpRequested = false;
         } else {
             // Auto-run + jump input
             this._handleInput(input, dt);
         }
+
+        // Gaucho Power state machine
+        this._updateGauchoPower(dt);
 
         // Physics
         this._applyPhysics(dt);
@@ -178,6 +212,8 @@ export class Player {
      */
     tripAndFall() {
         if (this.state === STATES.TRIPPING || this.state === STATES.LYING || this.state === STATES.GETTING_UP) return false;
+        if (this.state === STATES.DRINKING_MATE) return false;
+        if (this.gauchoPowerPhase === 'active' || this.gauchoPowerPhase === 'windDown') return false;
         if (this.isInvincible) return false;
 
         this.state = STATES.TRIPPING;
@@ -240,6 +276,8 @@ export class Player {
     fallInHole(potholeObstacle) {
         if (this.state === STATES.TRIPPING || this.state === STATES.LYING ||
             this.state === STATES.GETTING_UP || this.state === STATES.FALLING_IN_HOLE) return false;
+        if (this.state === STATES.DRINKING_MATE) return false;
+        if (this.gauchoPowerPhase === 'active' || this.gauchoPowerPhase === 'windDown') return false;
         if (this.isInvincible) return false;
 
         this.state = STATES.FALLING_IN_HOLE;
@@ -302,6 +340,57 @@ export class Player {
     }
 
     /**
+     * Update Gaucho Power state machine.
+     * Phases: drinking → active → windDown → none
+     */
+    _updateGauchoPower(dt) {
+        if (!this.gauchoPowerActive) return;
+
+        this.gauchoPowerTimer += dt;
+        const drinkDur = Config.gauchoPowerDrinkDuration;
+        const totalDur = Config.gauchoPowerDuration + drinkDur;
+        const windDownStart = totalDur - Config.gauchoPowerWindDown;
+
+        if (this.gauchoPowerPhase === 'drinking' && this.gauchoPowerTimer >= drinkDur) {
+            // Finish drinking → activate power
+            this.gauchoPowerPhase = 'active';
+            this.state = STATES.WALKING;
+            this.isInvincible = true;
+            this.invTimer = 0;
+            this.alpha = 1.0;
+        } else if (this.gauchoPowerPhase === 'active' && this.gauchoPowerTimer >= windDownStart) {
+            this.gauchoPowerPhase = 'windDown';
+        }
+
+        if (this.gauchoPowerTimer >= totalDur) {
+            // Power ended
+            this.gauchoPowerActive = false;
+            this.gauchoPowerPhase = 'none';
+            this.gauchoPowerColorTimer = 0;
+            this.gauchoPowerHue = 0;
+            this.isInvincible = false;
+            this.alpha = 1.0;
+            this.levelSpeedMultiplier = this.baseSpeedMultiplier;
+            return;
+        }
+
+        // Speed: active = 2x, windDown = lerp from 2x to 1x
+        if (this.gauchoPowerPhase === 'active') {
+            this.levelSpeedMultiplier = this.baseSpeedMultiplier * Config.gauchoPowerSpeedMult;
+        } else if (this.gauchoPowerPhase === 'windDown') {
+            const windProgress = (this.gauchoPowerTimer - windDownStart) / Config.gauchoPowerWindDown;
+            const t = Math.min(1, windProgress);
+            this.levelSpeedMultiplier = this.baseSpeedMultiplier * (Config.gauchoPowerSpeedMult - (Config.gauchoPowerSpeedMult - 1) * t);
+        }
+
+        // Color cycling
+        if (this.gauchoPowerPhase === 'active' || this.gauchoPowerPhase === 'windDown') {
+            this.gauchoPowerColorTimer += dt;
+            this.gauchoPowerHue = (this.gauchoPowerColorTimer * 600) % 360; // cycles rapidly
+        }
+    }
+
+    /**
      * Gets the current texture based on state and animation frame.
      */
     getCurrentTexture() {
@@ -318,6 +407,8 @@ export class Player {
                 return this.textures.getUp;
             case STATES.FALLING_IN_HOLE:
                 return this.textures.idle; // Not drawn (visible=false)
+            case STATES.DRINKING_MATE:
+                return this.textures.idle; // Standing still while drinking
             default:
                 return this.textures.idle;
         }
@@ -368,7 +459,43 @@ export class Player {
             ctx.drawImage(texture, drawX, screenY, w, h);
         }
 
+        // Color cycling during Gaucho Power (Mario star effect)
+        if (this.gauchoPowerPhase === 'active' || this.gauchoPowerPhase === 'windDown') {
+            ctx.globalCompositeOperation = 'source-atop';
+            const hue = this.gauchoPowerHue;
+            let tintAlpha = 0.5;
+            if (this.gauchoPowerPhase === 'windDown') {
+                // Gradually reduce tint intensity
+                const drinkDur = Config.gauchoPowerDrinkDuration;
+                const totalDur = Config.gauchoPowerDuration + drinkDur;
+                const windDownStart = totalDur - Config.gauchoPowerWindDown;
+                const windProgress = (this.gauchoPowerTimer - windDownStart) / Config.gauchoPowerWindDown;
+                tintAlpha = 0.5 * (1 - Math.min(1, windProgress));
+            }
+            ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${tintAlpha})`;
+            if (!this.facingRight) {
+                ctx.fillRect(0, 0, w, h);
+            } else {
+                ctx.fillRect(drawX, screenY, w, h);
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
         ctx.restore();
+
+        // Draw mate sprite next to player during drinking phase
+        if (this.state === STATES.DRINKING_MATE && matePickupTex) {
+            const mateScale = scale * 0.8;
+            const mateW = matePickupTex.width * mateScale;
+            const mateH = matePickupTex.height * mateScale;
+            // Position mate to the right of the player, at chest height
+            const mateX = drawX + w + 2;
+            const mateY = screenY + h * 0.3;
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(matePickupTex, mateX, mateY, mateW, mateH);
+            ctx.restore();
+        }
     }
 
     /**
@@ -396,5 +523,12 @@ export class Player {
         this.potholeTimer = 0;
         this.potholeObstacle = null;
         this.jumpRequested = false;
+        // Reset gaucho power
+        this.gauchoPowerActive = false;
+        this.gauchoPowerTimer = 0;
+        this.gauchoPowerPhase = 'none';
+        this.gauchoPowerColorTimer = 0;
+        this.gauchoPowerHue = 0;
+        this.levelSpeedMultiplier = this.baseSpeedMultiplier;
     }
 }
