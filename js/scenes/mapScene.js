@@ -95,9 +95,21 @@ export class MapScene {
         this.instructionAlpha = 1.0;
         this.instructionDir = -1;
 
+        // Is this the very first map showing (level 1, Montevideo)?
+        this.isFirstMap = (this.targetCityIndex === 0);
+
+        // For first map, no route animation needed — show immediately
+        if (this.isFirstMap) {
+            this.routeAnimDuration = 0.5; // short pause then ready
+        }
+
         // Text caches
         this._titleText = TC.renderText('RUTA COSTERA');
         this._continueText = TC.renderText('TOCA O PULSA ENTER');
+        this._youAreHereText = TC.renderText('TU ESTAS AQUI');
+
+        // "You are here" marker animation
+        this._youAreHereTimer = 0;
 
         // Pre-render city name texts
         this._cityTexts = CITY_DATA.map(c => TC.renderText(c.name.toUpperCase()));
@@ -125,6 +137,9 @@ export class MapScene {
 
         // Pulse timer for current city dot
         this.pulseTimer += dt * 4;
+
+        // "You are here" marker animation
+        this._youAreHereTimer += dt;
 
         // Instruction blink
         if (this.canProceed) {
@@ -357,6 +372,58 @@ export class MapScene {
                 ctx.globalCompositeOperation = 'source-over';
             }
 
+            ctx.restore();
+        }
+
+        // --- "TU ESTAS AQUI" marker (first map only, or always on target city for level 1) ---
+        if (this.isFirstMap && this.canProceed) {
+            const targetPos = CITY_POSITIONS[this.targetCityIndex];
+            const yahText = this._youAreHereText;
+            const yahScale = scale * 0.55;
+            const yahW = yahText.width * yahScale;
+            const yahH = yahText.height * yahScale;
+
+            // Position above the city dot with a pointer
+            const yahX = targetPos.x - yahW / 2;
+            const yahY = targetPos.y - 55 - yahH;
+
+            // Bobbing animation
+            const bob = Math.sin(this._youAreHereTimer * 3) * 4;
+
+            // Background bubble
+            const pad = 6;
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
+            const bubbleX = yahX - pad;
+            const bubbleY = yahY - pad + bob;
+            const bubbleW = yahW + pad * 2;
+            const bubbleH = yahH + pad * 2;
+            // Rounded rect
+            const r = 5;
+            ctx.beginPath();
+            ctx.moveTo(bubbleX + r, bubbleY);
+            ctx.lineTo(bubbleX + bubbleW - r, bubbleY);
+            ctx.arcTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + r, r);
+            ctx.lineTo(bubbleX + bubbleW, bubbleY + bubbleH - r);
+            ctx.arcTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX + bubbleW - r, bubbleY + bubbleH, r);
+            ctx.lineTo(bubbleX + r, bubbleY + bubbleH);
+            ctx.arcTo(bubbleX, bubbleY + bubbleH, bubbleX, bubbleY + bubbleH - r, r);
+            ctx.lineTo(bubbleX, bubbleY + r);
+            ctx.arcTo(bubbleX, bubbleY, bubbleX + r, bubbleY, r);
+            ctx.closePath();
+            ctx.fill();
+
+            // Pointer triangle down to the dot
+            ctx.beginPath();
+            ctx.moveTo(targetPos.x - 6, bubbleY + bubbleH);
+            ctx.lineTo(targetPos.x + 6, bubbleY + bubbleH);
+            ctx.lineTo(targetPos.x, bubbleY + bubbleH + 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Text
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(yahText, yahX, yahY + bob, yahW, yahH);
             ctx.restore();
         }
 

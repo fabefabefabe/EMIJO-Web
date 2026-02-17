@@ -358,6 +358,7 @@ export class MenuScene {
         this.game.state.selectedCharacter = this.selectedIndex === 0 ? 'emi' : 'jo';
         // Resetear nivel a 1 al iniciar nuevo juego
         this.game.state.currentLevel = 1;
-        this.game.setScene('game');
+        // Show map scene first (introduces the route)
+        this.game.setScene('map');
     }
 }

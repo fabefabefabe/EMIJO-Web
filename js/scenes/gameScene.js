@@ -253,9 +253,16 @@ export class GameScene {
 
     /**
      * Spawn mate pickups at intervals (low probability per interval).
-     * Level 2: guaranteed one mate pickup at a random position.
+     * Level 2: guaranteed one mate pickup so the player discovers the powerup.
      */
     _spawnMatePickups() {
+        // Level 2: ALWAYS place one mate pickup (introduces the mechanic)
+        if (this.currentLevel === 2) {
+            // Place it at ~40% of the level so player has time to see it
+            const mateX = this.flag.x * 0.4;
+            this.matePickups.push(new MatePickup(mateX, Config.groundSurface));
+        }
+
         const intervalPx = Config.mateSpawnIntervalMeters / Config.metersPerPixel;
         // Start from 2x interval (so mate doesn't appear too early)
         for (let x = intervalPx * 2; x < this.flag.x; x += intervalPx) {
@@ -263,15 +270,6 @@ export class GameScene {
                 const y = Config.groundSurface; // on the ground (easy to grab)
                 this.matePickups.push(new MatePickup(x, y));
             }
-        }
-
-        // Level 2: guarantee at least one mate pickup
-        if (this.currentLevel === 2 && this.matePickups.length === 0) {
-            // Place it somewhere in the middle third of the level
-            const minX = this.flag.x * 0.3;
-            const maxX = this.flag.x * 0.65;
-            const mateX = minX + Math.random() * (maxX - minX);
-            this.matePickups.push(new MatePickup(mateX, Config.groundSurface));
         }
     }
 
