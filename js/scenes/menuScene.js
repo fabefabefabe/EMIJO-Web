@@ -98,7 +98,7 @@ export class MenuScene {
             this.game.toggleMusic();
         }
         if (input.consumeKey('Enter') || input.consumeKey('Space')) {
-            this.game.music.playTrack('game');
+            this.game.music.stop();
             this._confirmSelection();
         }
     }
@@ -330,11 +330,11 @@ export class MenuScene {
 
         if (this._emiBounds && this._hitTest(x, y, this._emiBounds)) {
             this.selectedIndex = 0;
-            this.game.music.playTrack('game');
+            this.game.music.stop();
             this._confirmSelection();
         } else if (this._joBounds && this._hitTest(x, y, this._joBounds)) {
             this.selectedIndex = 1;
-            this.game.music.playTrack('game');
+            this.game.music.stop();
             this._confirmSelection();
         }
     }

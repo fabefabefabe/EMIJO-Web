@@ -7,99 +7,99 @@ import * as TC from '../textureCache.js';
 // Route goes from left (Montevideo) to right (Barra del Chuy)
 // Coast line runs diagonally from upper-left to lower-right
 const CITY_POSITIONS = [
-    { x: 65,  y: 155 },   // Montevideo
-    { x: 130, y: 185 },   // Ciudad de la Costa
-    { x: 200, y: 210 },   // REPUBLICA del Pinar
-    { x: 270, y: 235 },   // Atlantida
-    { x: 340, y: 255 },   // Jaureguiberry
-    { x: 410, y: 275 },   // Santa Ana
-    { x: 480, y: 295 },   // Piriapolis
-    { x: 545, y: 310 },   // CHIUAUA
-    { x: 610, y: 325 },   // Punta del Este
-    { x: 670, y: 340 },   // Jose Ignacio
-    { x: 730, y: 355 },   // La Paloma
-    { x: 785, y: 368 },   // Cabo Polonio
-    { x: 835, y: 380 },   // Punta del Diablo
-    { x: 880, y: 390 },   // La Coronilla
-    { x: 925, y: 400 },   // Barra del Chuy
+    { x: 55,  y: 170 },   // 0  Montevideo
+    { x: 120, y: 195 },   // 1  Ciudad de la Costa
+    { x: 185, y: 220 },   // 2  REPUBLICA del Pinar
+    { x: 250, y: 243 },   // 3  Atlantida
+    { x: 318, y: 263 },   // 4  Jaureguiberry
+    { x: 388, y: 283 },   // 5  Santa Ana
+    { x: 458, y: 300 },   // 6  Piriapolis
+    { x: 528, y: 317 },   // 7  CHIUAUA
+    { x: 598, y: 332 },   // 8  Punta del Este
+    { x: 665, y: 347 },   // 9  Jose Ignacio
+    { x: 728, y: 360 },   // 10 La Paloma
+    { x: 788, y: 372 },   // 11 Cabo Polonio
+    { x: 840, y: 383 },   // 12 Punta del Diablo
+    { x: 888, y: 393 },   // 13 La Coronilla
+    { x: 932, y: 403 },   // 14 Barra del Chuy
 ];
 
-// Label placement for each city: direction from dot + custom offset
-// 'above' = label above dot, 'below' = label below dot
-// 'left' = label to the left, 'right' = label to the right
+// Label placement: each city label positioned to avoid overlaps
+// labelX/labelY are pixel offsets from the dot center
+// Positive labelX = right of dot, negative = left of dot
+// Positive labelY = below dot, negative = above dot
 const LABEL_PLACEMENT = [
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // Montevideo
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // Ciudad de la Costa
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // REPUBLICA del Pinar
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // Atlantida
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // Jaureguiberry
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // Santa Ana
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // Piriapolis
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // CHIUAUA
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // Punta del Este
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // Jose Ignacio
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // La Paloma
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // Cabo Polonio
-    { side: 'above', offsetX: 0,   offsetY: -8 },   // Punta del Diablo
-    { side: 'below', offsetX: 10,  offsetY: 8 },    // La Coronilla
-    { side: 'above', offsetX: -20, offsetY: -8 },   // Barra del Chuy
+    { labelX: 10,  labelY: -18 },  // 0  Montevideo — above right
+    { labelX: 10,  labelY: 10 },   // 1  Ciudad de la Costa — below right
+    { labelX: 10,  labelY: -18 },  // 2  REPUBLICA del Pinar — above right
+    { labelX: 10,  labelY: 10 },   // 3  Atlantida — below right
+    { labelX: 10,  labelY: -18 },  // 4  Jaureguiberry — above right
+    { labelX: 10,  labelY: 10 },   // 5  Santa Ana — below right
+    { labelX: 10,  labelY: -18 },  // 6  Piriapolis — above right
+    { labelX: 10,  labelY: 10 },   // 7  CHIUAUA — below right
+    { labelX: 10,  labelY: -18 },  // 8  Punta del Este — above right
+    { labelX: 10,  labelY: 10 },   // 9  Jose Ignacio — below right
+    { labelX: 10,  labelY: -18 },  // 10 La Paloma — above right
+    { labelX: 10,  labelY: 10 },   // 11 Cabo Polonio — below right
+    { labelX: 10,  labelY: -18 },  // 12 Punta del Diablo — above right
+    { labelX: 10,  labelY: 10 },   // 13 La Coronilla — below right
+    { labelX: -80, labelY: -18 },  // 14 Barra del Chuy — above left (near edge)
 ];
 
 // Coast polygon (land mass, green area) — fills from top edge down to coast
 const COAST_POLYGON = [
     { x: 0,   y: 0 },
     { x: 960, y: 0 },
-    { x: 960, y: 430 },
-    { x: 920, y: 420 },
-    { x: 870, y: 410 },
-    { x: 820, y: 398 },
-    { x: 770, y: 385 },
-    { x: 720, y: 372 },
-    { x: 660, y: 358 },
-    { x: 600, y: 342 },
-    { x: 535, y: 325 },
-    { x: 470, y: 310 },
-    { x: 400, y: 292 },
-    { x: 330, y: 272 },
-    { x: 260, y: 250 },
-    { x: 190, y: 225 },
-    { x: 120, y: 200 },
-    { x: 60,  y: 170 },
-    { x: 0,   y: 140 },
+    { x: 960, y: 435 },
+    { x: 920, y: 425 },
+    { x: 870, y: 413 },
+    { x: 820, y: 400 },
+    { x: 770, y: 388 },
+    { x: 720, y: 375 },
+    { x: 660, y: 360 },
+    { x: 590, y: 345 },
+    { x: 520, y: 328 },
+    { x: 450, y: 312 },
+    { x: 380, y: 295 },
+    { x: 310, y: 275 },
+    { x: 240, y: 255 },
+    { x: 175, y: 232 },
+    { x: 110, y: 207 },
+    { x: 50,  y: 182 },
+    { x: 0,   y: 155 },
 ];
 
 // Inner land gradient polygon (lighter green, higher up)
 const INNER_LAND = [
     { x: 0,   y: 0 },
     { x: 960, y: 0 },
-    { x: 960, y: 380 },
-    { x: 800, y: 350 },
-    { x: 600, y: 300 },
-    { x: 400, y: 245 },
-    { x: 200, y: 180 },
-    { x: 0,   y: 100 },
+    { x: 960, y: 385 },
+    { x: 800, y: 355 },
+    { x: 600, y: 305 },
+    { x: 400, y: 250 },
+    { x: 200, y: 190 },
+    { x: 0,   y: 115 },
 ];
 
 // Coastline points (sand/beach line at edge of land)
 const COASTLINE = [
-    { x: 0,   y: 150 },
-    { x: 50,  y: 165 },
-    { x: 100, y: 185 },
-    { x: 150, y: 205 },
-    { x: 210, y: 225 },
-    { x: 270, y: 245 },
-    { x: 340, y: 265 },
-    { x: 410, y: 285 },
-    { x: 475, y: 305 },
-    { x: 540, y: 320 },
-    { x: 605, y: 337 },
-    { x: 665, y: 352 },
-    { x: 725, y: 367 },
-    { x: 780, y: 380 },
-    { x: 830, y: 393 },
-    { x: 875, y: 405 },
-    { x: 925, y: 416 },
-    { x: 960, y: 425 },
+    { x: 0,   y: 165 },
+    { x: 45,  y: 180 },
+    { x: 100, y: 200 },
+    { x: 160, y: 220 },
+    { x: 225, y: 240 },
+    { x: 295, y: 260 },
+    { x: 370, y: 280 },
+    { x: 445, y: 298 },
+    { x: 515, y: 315 },
+    { x: 585, y: 332 },
+    { x: 650, y: 348 },
+    { x: 715, y: 362 },
+    { x: 775, y: 375 },
+    { x: 828, y: 387 },
+    { x: 878, y: 398 },
+    { x: 922, y: 410 },
+    { x: 960, y: 420 },
 ];
 
 export class MapScene {
@@ -372,26 +372,21 @@ export class MapScene {
             ctx.lineWidth = 1.5;
             ctx.stroke();
 
-            // City name label
+            // City name label — smaller text, positioned by per-city offsets
             const cityText = this._cityTexts[i];
-            const nameScale = scale * 0.4;
+            const nameScale = scale * 0.32;
             const nameW = cityText.width * nameScale;
             const nameH = cityText.height * nameScale;
 
-            // Use per-city placement to avoid overlaps
+            // Position label using explicit offsets from dot
             const placement = LABEL_PLACEMENT[i];
-            let nameX, nameY;
-            if (placement.side === 'above') {
-                nameX = pos.x - nameW / 2 + placement.offsetX;
-                nameY = pos.y - dotRadius - nameH + placement.offsetY;
-            } else {
-                nameX = pos.x - nameW / 2 + placement.offsetX;
-                nameY = pos.y + dotRadius + placement.offsetY;
-            }
+            let nameX = pos.x + placement.labelX;
+            let nameY = pos.y + placement.labelY;
 
             // Clamp to canvas bounds
             if (nameX < 4) nameX = 4;
             if (nameX + nameW > W - 4) nameX = W - 4 - nameW;
+            if (nameY < 4) nameY = 4;
 
             ctx.save();
             ctx.imageSmoothingEnabled = false;
@@ -399,20 +394,12 @@ export class MapScene {
             if (isTarget) {
                 ctx.globalAlpha = 1.0;
             } else if (isVisited || isFirst) {
-                ctx.globalAlpha = 0.85;
+                ctx.globalAlpha = 0.9;
             } else {
-                ctx.globalAlpha = 0.5;
+                ctx.globalAlpha = 0.6;
             }
 
             ctx.drawImage(cityText, nameX, nameY, nameW, nameH);
-
-            // Gold tint for visited/target cities
-            if (isTarget || isVisited || isFirst) {
-                ctx.globalCompositeOperation = 'source-atop';
-                ctx.fillStyle = isTarget ? 'rgba(255, 255, 100, 0.5)' : 'rgba(255, 215, 0, 0.4)';
-                ctx.fillRect(nameX, nameY, nameW, nameH);
-                ctx.globalCompositeOperation = 'source-over';
-            }
 
             ctx.restore();
         }
