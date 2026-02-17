@@ -31,7 +31,7 @@ export class MusicSystem {
             // Octave 5
             C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
             // Octave 6
-            C6: 1046.50,
+            C6: 1046.50, D6: 1174.66, E6: 1318.51, G6: 1567.98,
         };
 
         // Rest symbol
@@ -730,30 +730,61 @@ export class MusicSystem {
     playGauchoPowerSound() {
         if (!this.audioCtx || this.isMuted) return;
 
-        // Epic ascending fanfare — longer and more dramatic than normal pickup
-        // C4-E4-G4-C5-E5-G5-C6
-        const notes = [
-            this.notes.C4, this.notes.E4, this.notes.G4,
-            this.notes.C5, this.notes.E5, this.notes.G5, this.notes.C6
-        ];
-        const dur = 0.05;
+        // Mario-star-style power-up jingle:
+        // Fast ascending arpeggio → triumphant hold → sparkle shimmer
+        const n = this.notes;
+        const t = this.audioCtx.currentTime;
 
-        notes.forEach((freq, i) => {
+        // Phase 1: Fast ascending arpeggio (0.0 – 0.4s)
+        const arpeggioNotes = [
+            n.C4, n.E4, n.G4, n.C5, n.E5, n.G5, n.C6, n.E6
+        ];
+        const arpDur = 0.05;
+        arpeggioNotes.forEach((freq, i) => {
             const osc = this.audioCtx.createOscillator();
             const gain = this.audioCtx.createGain();
-
             osc.type = 'square';
             osc.frequency.value = freq;
-
-            const startTime = this.audioCtx.currentTime + i * dur;
-            gain.gain.setValueAtTime(0.15, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur * 2);
-
+            const st = t + i * arpDur;
+            gain.gain.setValueAtTime(0.14, st);
+            gain.gain.exponentialRampToValueAtTime(0.001, st + arpDur * 3);
             osc.connect(gain);
             gain.connect(this.masterGain);
+            osc.start(st);
+            osc.stop(st + arpDur * 3);
+        });
 
-            osc.start(startTime);
-            osc.stop(startTime + dur * 2);
+        // Phase 2: Triumphant held chord (0.4 – 1.0s)
+        const chordStart = t + arpeggioNotes.length * arpDur;
+        const chordNotes = [n.C5, n.E5, n.G5];
+        chordNotes.forEach(freq => {
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.12, chordStart);
+            gain.gain.setValueAtTime(0.12, chordStart + 0.35);
+            gain.gain.exponentialRampToValueAtTime(0.001, chordStart + 0.6);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(chordStart);
+            osc.stop(chordStart + 0.65);
+        });
+
+        // Phase 3: Sparkle shimmer (0.3 – 0.9s) — high pitched rapid alternating
+        const shimmerNotes = [n.E6, n.G6, n.E6, n.C6, n.E6, n.G6];
+        shimmerNotes.forEach((freq, i) => {
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = freq;
+            const st = t + 0.3 + i * 0.08;
+            gain.gain.setValueAtTime(0.06, st);
+            gain.gain.exponentialRampToValueAtTime(0.001, st + 0.12);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(st);
+            osc.stop(st + 0.15);
         });
     }
 

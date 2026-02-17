@@ -2,104 +2,109 @@
 import { Config, CITY_DATA, getCityForLevel, isBeachLevel } from '../config.js';
 import * as TC from '../textureCache.js';
 
-// City positions on the canvas (960×540)
-// Inverted: land (green) on top, ocean (blue) on bottom
-// Route goes from left (Montevideo) to right (Barra del Chuy)
-// Coast line runs diagonally from upper-left to lower-right
-const CITY_POSITIONS = [
-    { x: 55,  y: 170 },   // 0  Montevideo
-    { x: 120, y: 195 },   // 1  Ciudad de la Costa
-    { x: 185, y: 220 },   // 2  REPUBLICA del Pinar
-    { x: 250, y: 243 },   // 3  Atlantida
-    { x: 318, y: 263 },   // 4  Jaureguiberry
-    { x: 388, y: 283 },   // 5  Santa Ana
-    { x: 458, y: 300 },   // 6  Piriapolis
-    { x: 528, y: 317 },   // 7  CHIUAUA
-    { x: 598, y: 332 },   // 8  Punta del Este
-    { x: 665, y: 347 },   // 9  Jose Ignacio
-    { x: 728, y: 360 },   // 10 La Paloma
-    { x: 788, y: 372 },   // 11 Cabo Polonio
-    { x: 840, y: 383 },   // 12 Punta del Diablo
-    { x: 888, y: 393 },   // 13 La Coronilla
-    { x: 932, y: 403 },   // 14 Barra del Chuy
+// ============================================================
+// City positions in a virtual 1200×700 coordinate system.
+// We then scale + center this into the 960×540 canvas, giving
+// a natural "zoom-out" feel with margins on all sides.
+// Land on top (green), ocean on bottom (blue).
+// Route runs from SW (Montevideo) to NE (Barra del Chuy).
+// ============================================================
+
+const VIRTUAL_W = 1200;
+const VIRTUAL_H = 700;
+
+// City dot positions in virtual coords — well-spread diagonal
+const CITY_POSITIONS_VIRTUAL = [
+    { x: 75,   y: 220 },   // 0  Montevideo
+    { x: 160,  y: 250 },   // 1  Ciudad de la Costa
+    { x: 250,  y: 280 },   // 2  REPUBLICA del Pinar
+    { x: 335,  y: 310 },   // 3  Atlantida
+    { x: 425,  y: 335 },   // 4  Jaureguiberry
+    { x: 510,  y: 358 },   // 5  Santa Ana
+    { x: 595,  y: 378 },   // 6  Piriapolis
+    { x: 680,  y: 398 },   // 7  CHIUAUA
+    { x: 760,  y: 415 },   // 8  Punta del Este
+    { x: 840,  y: 432 },   // 9  Jose Ignacio
+    { x: 920,  y: 448 },   // 10 La Paloma
+    { x: 990,  y: 462 },   // 11 Cabo Polonio
+    { x: 1050, y: 475 },   // 12 Punta del Diablo
+    { x: 1100, y: 487 },   // 13 La Coronilla
+    { x: 1145, y: 498 },   // 14 Barra del Chuy
 ];
 
-// Label placement: each city label positioned to avoid overlaps
-// labelX/labelY are pixel offsets from the dot center
-// Positive labelX = right of dot, negative = left of dot
-// Positive labelY = below dot, negative = above dot
+// Label placement offsets from dot in virtual coords
+// above = negative labelY, below = positive labelY
 const LABEL_PLACEMENT = [
-    { labelX: 10,  labelY: -18 },  // 0  Montevideo — above right
-    { labelX: 10,  labelY: 10 },   // 1  Ciudad de la Costa — below right
-    { labelX: 10,  labelY: -18 },  // 2  REPUBLICA del Pinar — above right
-    { labelX: 10,  labelY: 10 },   // 3  Atlantida — below right
-    { labelX: 10,  labelY: -18 },  // 4  Jaureguiberry — above right
-    { labelX: 10,  labelY: 10 },   // 5  Santa Ana — below right
-    { labelX: 10,  labelY: -18 },  // 6  Piriapolis — above right
-    { labelX: 10,  labelY: 10 },   // 7  CHIUAUA — below right
-    { labelX: 10,  labelY: -18 },  // 8  Punta del Este — above right
-    { labelX: 10,  labelY: 10 },   // 9  Jose Ignacio — below right
-    { labelX: 10,  labelY: -18 },  // 10 La Paloma — above right
-    { labelX: 10,  labelY: 10 },   // 11 Cabo Polonio — below right
-    { labelX: 10,  labelY: -18 },  // 12 Punta del Diablo — above right
-    { labelX: 10,  labelY: 10 },   // 13 La Coronilla — below right
-    { labelX: -80, labelY: -18 },  // 14 Barra del Chuy — above left (near edge)
+    { labelX: 12,  labelY: -22 },  // 0  Montevideo — above
+    { labelX: 12,  labelY: 12 },   // 1  Ciudad de la Costa — below
+    { labelX: 12,  labelY: -22 },  // 2  REP del Pinar — above
+    { labelX: 12,  labelY: 12 },   // 3  Atlantida — below
+    { labelX: 12,  labelY: -22 },  // 4  Jaureguiberry — above
+    { labelX: 12,  labelY: 12 },   // 5  Santa Ana — below
+    { labelX: 12,  labelY: -22 },  // 6  Piriapolis — above
+    { labelX: 12,  labelY: 12 },   // 7  CHIUAUA — below
+    { labelX: 12,  labelY: -22 },  // 8  Punta del Este — above
+    { labelX: 12,  labelY: 12 },   // 9  Jose Ignacio — below
+    { labelX: 12,  labelY: -22 },  // 10 La Paloma — above
+    { labelX: 12,  labelY: 12 },   // 11 Cabo Polonio — below
+    { labelX: 12,  labelY: -22 },  // 12 Punta del Diablo — above
+    { labelX: 12,  labelY: 12 },   // 13 La Coronilla — below
+    { labelX: -95, labelY: -22 },  // 14 Barra del Chuy — above left
 ];
 
-// Coast polygon (land mass, green area) — fills from top edge down to coast
-const COAST_POLYGON = [
-    { x: 0,   y: 0 },
-    { x: 960, y: 0 },
-    { x: 960, y: 435 },
-    { x: 920, y: 425 },
-    { x: 870, y: 413 },
-    { x: 820, y: 400 },
-    { x: 770, y: 388 },
-    { x: 720, y: 375 },
-    { x: 660, y: 360 },
-    { x: 590, y: 345 },
-    { x: 520, y: 328 },
-    { x: 450, y: 312 },
-    { x: 380, y: 295 },
-    { x: 310, y: 275 },
-    { x: 240, y: 255 },
-    { x: 175, y: 232 },
-    { x: 110, y: 207 },
-    { x: 50,  y: 182 },
-    { x: 0,   y: 155 },
+// Coast polygon in virtual coords (land mass from top)
+const COAST_POLYGON_V = [
+    { x: 0,    y: 0 },
+    { x: 1200, y: 0 },
+    { x: 1200, y: 540 },
+    { x: 1140, y: 520 },
+    { x: 1080, y: 500 },
+    { x: 1010, y: 482 },
+    { x: 930,  y: 465 },
+    { x: 850,  y: 448 },
+    { x: 770,  y: 430 },
+    { x: 690,  y: 412 },
+    { x: 605,  y: 392 },
+    { x: 520,  y: 372 },
+    { x: 435,  y: 348 },
+    { x: 345,  y: 322 },
+    { x: 260,  y: 295 },
+    { x: 170,  y: 264 },
+    { x: 85,   y: 234 },
+    { x: 0,    y: 200 },
 ];
 
-// Inner land gradient polygon (lighter green, higher up)
-const INNER_LAND = [
-    { x: 0,   y: 0 },
-    { x: 960, y: 0 },
-    { x: 960, y: 385 },
-    { x: 800, y: 355 },
-    { x: 600, y: 305 },
-    { x: 400, y: 250 },
-    { x: 200, y: 190 },
-    { x: 0,   y: 115 },
+// Inner land (lighter green) in virtual coords
+const INNER_LAND_V = [
+    { x: 0,    y: 0 },
+    { x: 1200, y: 0 },
+    { x: 1200, y: 480 },
+    { x: 1000, y: 430 },
+    { x: 800,  y: 380 },
+    { x: 600,  y: 335 },
+    { x: 400,  y: 280 },
+    { x: 200,  y: 220 },
+    { x: 0,    y: 150 },
 ];
 
-// Coastline points (sand/beach line at edge of land)
-const COASTLINE = [
-    { x: 0,   y: 165 },
-    { x: 45,  y: 180 },
-    { x: 100, y: 200 },
-    { x: 160, y: 220 },
-    { x: 225, y: 240 },
-    { x: 295, y: 260 },
-    { x: 370, y: 280 },
-    { x: 445, y: 298 },
-    { x: 515, y: 315 },
-    { x: 585, y: 332 },
-    { x: 650, y: 348 },
-    { x: 715, y: 362 },
-    { x: 775, y: 375 },
-    { x: 828, y: 387 },
-    { x: 878, y: 398 },
-    { x: 922, y: 410 },
-    { x: 960, y: 420 },
+// Coastline (sandy line) in virtual coords
+const COASTLINE_V = [
+    { x: 0,    y: 210 },
+    { x: 70,   y: 232 },
+    { x: 155,  y: 258 },
+    { x: 245,  y: 287 },
+    { x: 335,  y: 314 },
+    { x: 425,  y: 340 },
+    { x: 510,  y: 363 },
+    { x: 595,  y: 384 },
+    { x: 680,  y: 404 },
+    { x: 760,  y: 422 },
+    { x: 840,  y: 440 },
+    { x: 920,  y: 456 },
+    { x: 1000, y: 474 },
+    { x: 1070, y: 492 },
+    { x: 1135, y: 512 },
+    { x: 1200, y: 530 },
 ];
 
 export class MapScene {
@@ -115,9 +120,24 @@ export class MapScene {
         const nextLevel = this.game.state.currentLevel || 1;
         this.targetCityIndex = this._getCityIndex(nextLevel);
 
+        // Compute scale to fit virtual coords into canvas with margins
+        const W = Config.sceneWidth;   // 960
+        const H = Config.sceneHeight;  // 540
+        const marginX = 30;
+        const marginTop = 55;  // room for title
+        const marginBottom = 45; // room for instructions
+        const availW = W - marginX * 2;
+        const availH = H - marginTop - marginBottom;
+        this._mapScale = Math.min(availW / VIRTUAL_W, availH / VIRTUAL_H);
+        this._mapOffsetX = marginX + (availW - VIRTUAL_W * this._mapScale) / 2;
+        this._mapOffsetY = marginTop + (availH - VIRTUAL_H * this._mapScale) / 2;
+
+        // Pre-compute city positions in canvas coords
+        this._cityPositions = CITY_POSITIONS_VIRTUAL.map(p => this._toCanvas(p));
+
         // Animation
-        this.routeAnimDuration = 2.0; // seconds to animate route
-        this.routeProgress = 0; // 0 → 1
+        this.routeAnimDuration = 2.0;
+        this.routeProgress = 0;
 
         // Pulsing for current city
         this.pulseTimer = 0;
@@ -128,10 +148,8 @@ export class MapScene {
 
         // Is this the very first map showing (level 1, Montevideo)?
         this.isFirstMap = (this.targetCityIndex === 0);
-
-        // For first map, no route animation needed — show immediately
         if (this.isFirstMap) {
-            this.routeAnimDuration = 0.5; // short pause then ready
+            this.routeAnimDuration = 0.5;
         }
 
         // Text caches
@@ -149,6 +167,14 @@ export class MapScene {
         this.game.music.playTrack('map');
     }
 
+    /** Convert virtual coordinates to canvas coordinates */
+    _toCanvas(p) {
+        return {
+            x: this._mapOffsetX + p.x * this._mapScale,
+            y: this._mapOffsetY + p.y * this._mapScale,
+        };
+    }
+
     _getCityIndex(level) {
         for (let i = CITY_DATA.length - 1; i >= 0; i--) {
             if (level >= CITY_DATA[i].level) return i;
@@ -159,30 +185,23 @@ export class MapScene {
     update(dt) {
         this.timer += dt;
 
-        // Animate route drawing
         if (this.routeProgress < 1) {
             this.routeProgress = Math.min(1, this.timer / this.routeAnimDuration);
         }
 
-        // Allow proceeding after animation completes + 0.3s buffer
         if (this.timer >= this.routeAnimDuration + 0.3) {
             this.canProceed = true;
         }
 
-        // Pulse timer for current city dot
         this.pulseTimer += dt * 4;
-
-        // "You are here" marker animation
         this._youAreHereTimer += dt;
 
-        // Instruction blink
         if (this.canProceed) {
             this.instructionAlpha += this.instructionDir * 0.75 * dt;
             if (this.instructionAlpha <= 0.3) { this.instructionAlpha = 0.3; this.instructionDir = 1; }
             if (this.instructionAlpha >= 1.0) { this.instructionAlpha = 1.0; this.instructionDir = -1; }
         }
 
-        // Input
         const input = this.game.input;
         if (this.canProceed) {
             if (input.consumeKey('Enter') || input.consumeKey('Space')) {
@@ -198,26 +217,39 @@ export class MapScene {
         this.game.setScene('game');
     }
 
+    /** Draw a polygon from virtual coords */
+    _drawPoly(ctx, points) {
+        const p0 = this._toCanvas(points[0]);
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        for (let i = 1; i < points.length; i++) {
+            const p = this._toCanvas(points[i]);
+            ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+    }
+
     draw(ctx) {
         const W = Config.sceneWidth;
         const H = Config.sceneHeight;
         const scale = Config.pixelScale;
+        const ms = this._mapScale;
 
-        // --- Ocean background (below coast) ---
+        // --- Ocean background ---
         ctx.fillStyle = '#0a1e3d';
         ctx.fillRect(0, 0, W, H);
 
-        // --- Ocean subtle wave texture (only in lower portion) ---
+        // --- Ocean subtle wave texture ---
         ctx.save();
         ctx.globalAlpha = 0.08;
         const waveTime = performance.now() / 1000;
-        for (let wy = 160; wy < H; wy += 30) {
-            const waveOff = Math.sin(waveTime + wy * 0.03) * 8;
+        for (let wy = this._mapOffsetY + 120 * ms; wy < H; wy += 25) {
+            const waveOff = Math.sin(waveTime + wy * 0.03) * 6;
             ctx.strokeStyle = '#3a6ea5';
             ctx.lineWidth = 1;
             ctx.beginPath();
             for (let wx = 0; wx < W; wx += 5) {
-                const y2 = wy + Math.sin(waveTime * 1.5 + wx * 0.02) * 3 + waveOff;
+                const y2 = wy + Math.sin(waveTime * 1.5 + wx * 0.02) * 2.5 + waveOff;
                 if (wx === 0) ctx.moveTo(wx, y2);
                 else ctx.lineTo(wx, y2);
             }
@@ -225,138 +257,121 @@ export class MapScene {
         }
         ctx.restore();
 
-        // --- Land mass (green polygon, covers top portion) ---
+        // --- Land mass (dark green polygon) ---
         ctx.fillStyle = '#1a4d1a';
-        ctx.beginPath();
-        ctx.moveTo(COAST_POLYGON[0].x, COAST_POLYGON[0].y);
-        for (let i = 1; i < COAST_POLYGON.length; i++) {
-            ctx.lineTo(COAST_POLYGON[i].x, COAST_POLYGON[i].y);
-        }
-        ctx.closePath();
+        this._drawPoly(ctx, COAST_POLYGON_V);
         ctx.fill();
 
-        // --- Inner land gradient (lighter green towards interior) ---
+        // --- Inner land gradient (lighter green) ---
         ctx.save();
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = '#2a6d2a';
-        ctx.beginPath();
-        ctx.moveTo(INNER_LAND[0].x, INNER_LAND[0].y);
-        for (let i = 1; i < INNER_LAND.length; i++) {
-            ctx.lineTo(INNER_LAND[i].x, INNER_LAND[i].y);
-        }
-        ctx.closePath();
+        this._drawPoly(ctx, INNER_LAND_V);
         ctx.fill();
         ctx.restore();
 
-        // --- Coastline (beige/sand line) ---
+        // --- Coastline (beige sand line) ---
         ctx.strokeStyle = '#d4b896';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(COASTLINE[0].x, COASTLINE[0].y);
-        for (let i = 1; i < COASTLINE.length; i++) {
-            const prev = COASTLINE[i - 1];
-            const curr = COASTLINE[i];
-            // Smooth curve
+        const cl0 = this._toCanvas(COASTLINE_V[0]);
+        ctx.moveTo(cl0.x, cl0.y);
+        for (let i = 1; i < COASTLINE_V.length; i++) {
+            const prev = this._toCanvas(COASTLINE_V[i - 1]);
+            const curr = this._toCanvas(COASTLINE_V[i]);
             const cpx = (prev.x + curr.x) / 2;
             const cpy = (prev.y + curr.y) / 2;
             ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
         }
-        ctx.lineTo(COASTLINE[COASTLINE.length - 1].x, COASTLINE[COASTLINE.length - 1].y);
+        const clLast = this._toCanvas(COASTLINE_V[COASTLINE_V.length - 1]);
+        ctx.lineTo(clLast.x, clLast.y);
         ctx.stroke();
 
         // --- Route line (red, animated) ---
+        const CP = this._cityPositions;
         if (this.targetCityIndex > 0 && this.routeProgress > 0) {
-            // Calculate how far along the route to draw
             const totalSegments = this.targetCityIndex;
             const progressSegments = this.routeProgress * totalSegments;
             const fullSegments = Math.floor(progressSegments);
             const partialFrac = progressSegments - fullSegments;
 
-            ctx.strokeStyle = '#e63946';
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.beginPath();
-            ctx.moveTo(CITY_POSITIONS[0].x, CITY_POSITIONS[0].y);
-
-            for (let i = 1; i <= fullSegments && i < CITY_POSITIONS.length; i++) {
-                ctx.lineTo(CITY_POSITIONS[i].x, CITY_POSITIONS[i].y);
-            }
-
-            // Partial segment
-            if (fullSegments < totalSegments) {
-                const fromIdx = fullSegments;
-                const toIdx = fullSegments + 1;
-                if (toIdx < CITY_POSITIONS.length) {
-                    const from = CITY_POSITIONS[fromIdx];
-                    const to = CITY_POSITIONS[toIdx];
-                    const px = from.x + (to.x - from.x) * partialFrac;
-                    const py = from.y + (to.y - from.y) * partialFrac;
-                    ctx.lineTo(px, py);
-                }
-            }
-
-            ctx.stroke();
-
-            // Draw route glow
+            // Route glow (drawn first, wider)
             ctx.save();
             ctx.globalAlpha = 0.3;
             ctx.strokeStyle = '#ff6b6b';
-            ctx.lineWidth = 8;
+            ctx.lineWidth = 6;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.beginPath();
-            ctx.moveTo(CITY_POSITIONS[0].x, CITY_POSITIONS[0].y);
-            for (let i = 1; i <= fullSegments && i < CITY_POSITIONS.length; i++) {
-                ctx.lineTo(CITY_POSITIONS[i].x, CITY_POSITIONS[i].y);
+            ctx.moveTo(CP[0].x, CP[0].y);
+            for (let i = 1; i <= fullSegments && i < CP.length; i++) {
+                ctx.lineTo(CP[i].x, CP[i].y);
             }
             if (fullSegments < totalSegments) {
-                const fromIdx = fullSegments;
-                const toIdx = fullSegments + 1;
-                if (toIdx < CITY_POSITIONS.length) {
-                    const from = CITY_POSITIONS[fromIdx];
-                    const to = CITY_POSITIONS[toIdx];
-                    const px = from.x + (to.x - from.x) * partialFrac;
-                    const py = from.y + (to.y - from.y) * partialFrac;
-                    ctx.lineTo(px, py);
+                const from = CP[fullSegments];
+                const to = CP[fullSegments + 1];
+                if (to) {
+                    ctx.lineTo(from.x + (to.x - from.x) * partialFrac,
+                               from.y + (to.y - from.y) * partialFrac);
                 }
             }
             ctx.stroke();
             ctx.restore();
+
+            // Route line (solid)
+            ctx.strokeStyle = '#e63946';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(CP[0].x, CP[0].y);
+            for (let i = 1; i <= fullSegments && i < CP.length; i++) {
+                ctx.lineTo(CP[i].x, CP[i].y);
+            }
+            if (fullSegments < totalSegments) {
+                const from = CP[fullSegments];
+                const to = CP[fullSegments + 1];
+                if (to) {
+                    ctx.lineTo(from.x + (to.x - from.x) * partialFrac,
+                               from.y + (to.y - from.y) * partialFrac);
+                }
+            }
+            ctx.stroke();
         }
 
         // --- City dots and names ---
+        // Use a smaller text scale relative to map scale
+        const textScale = scale * 0.28;
+
         for (let i = 0; i < CITY_DATA.length; i++) {
-            const pos = CITY_POSITIONS[i];
+            const pos = CP[i];
             const isTarget = (i === this.targetCityIndex);
             const isVisited = (i < this.targetCityIndex);
-            const isFirst = (i === 0); // Montevideo always visited
+            const isFirst = (i === 0);
 
-            // Dot color
+            // Dot color & size
             let dotColor, dotRadius;
             if (isTarget) {
-                // Pulsing yellow/gold
                 const pulse = 0.5 + Math.sin(this.pulseTimer) * 0.5;
-                const r = Math.round(255);
                 const g = Math.round(200 + pulse * 55);
                 const b = Math.round(50 * (1 - pulse));
-                dotColor = `rgb(${r},${g},${b})`;
-                dotRadius = 6 + Math.sin(this.pulseTimer) * 2;
+                dotColor = `rgb(255,${g},${b})`;
+                dotRadius = 5 + Math.sin(this.pulseTimer) * 1.5;
             } else if (isVisited || isFirst) {
-                dotColor = '#ffd700'; // gold
-                dotRadius = 5;
-            } else {
-                dotColor = '#888888'; // gray (brighter for visibility on dark ocean)
+                dotColor = '#ffd700';
                 dotRadius = 4;
+            } else {
+                dotColor = '#888888';
+                dotRadius = 3;
             }
 
-            // Draw dot glow for target
+            // Dot glow for target
             if (isTarget) {
                 ctx.save();
                 ctx.globalAlpha = 0.4;
                 ctx.fillStyle = '#ffff00';
                 ctx.beginPath();
-                ctx.arc(pos.x, pos.y, dotRadius + 5, 0, Math.PI * 2);
+                ctx.arc(pos.x, pos.y, dotRadius + 4, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
             }
@@ -369,24 +384,24 @@ export class MapScene {
 
             // Dot border
             ctx.strokeStyle = isTarget ? '#ffffff' : (isVisited || isFirst ? '#b8860b' : '#555555');
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.2;
             ctx.stroke();
 
-            // City name label — smaller text, positioned by per-city offsets
+            // City name label
             const cityText = this._cityTexts[i];
-            const nameScale = scale * 0.32;
-            const nameW = cityText.width * nameScale;
-            const nameH = cityText.height * nameScale;
+            const nameW = cityText.width * textScale;
+            const nameH = cityText.height * textScale;
 
-            // Position label using explicit offsets from dot
+            // Position using label placement offsets (scaled)
             const placement = LABEL_PLACEMENT[i];
-            let nameX = pos.x + placement.labelX;
-            let nameY = pos.y + placement.labelY;
+            let nameX = pos.x + placement.labelX * ms;
+            let nameY = pos.y + placement.labelY * ms;
 
             // Clamp to canvas bounds
             if (nameX < 4) nameX = 4;
             if (nameX + nameW > W - 4) nameX = W - 4 - nameW;
             if (nameY < 4) nameY = 4;
+            if (nameY + nameH > H - 4) nameY = H - 4 - nameH;
 
             ctx.save();
             ctx.imageSmoothingEnabled = false;
@@ -396,39 +411,41 @@ export class MapScene {
             } else if (isVisited || isFirst) {
                 ctx.globalAlpha = 0.9;
             } else {
-                ctx.globalAlpha = 0.6;
+                ctx.globalAlpha = 0.55;
             }
 
             ctx.drawImage(cityText, nameX, nameY, nameW, nameH);
-
             ctx.restore();
         }
 
         // --- "TU ESTAS AQUI" marker (first map only) ---
         if (this.isFirstMap && this.canProceed) {
-            const targetPos = CITY_POSITIONS[this.targetCityIndex];
+            const targetPos = CP[this.targetCityIndex];
             const yahText = this._youAreHereText;
-            const yahScale = scale * 0.55;
+            const yahScale = scale * 0.45;
             const yahW = yahText.width * yahScale;
             const yahH = yahText.height * yahScale;
 
-            // Position above the city dot with a pointer
-            const yahX = targetPos.x - yahW / 2;
-            const yahY = targetPos.y - 55 - yahH;
+            // Position above+right of the city dot
+            const yahX = targetPos.x + 15;
+            const yahY = targetPos.y - 50 - yahH;
+
+            // Clamp so it doesn't go off-screen
+            const clampedX = Math.max(4, Math.min(yahX, W - yahW - 20));
+            const clampedY = Math.max(4, yahY);
 
             // Bobbing animation
-            const bob = Math.sin(this._youAreHereTimer * 3) * 4;
+            const bob = Math.sin(this._youAreHereTimer * 3) * 3;
 
             // Background bubble
-            const pad = 6;
+            const pad = 5;
             ctx.save();
             ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
-            const bubbleX = yahX - pad;
-            const bubbleY = yahY - pad + bob;
+            const bubbleX = clampedX - pad;
+            const bubbleY = clampedY - pad + bob;
             const bubbleW = yahW + pad * 2;
             const bubbleH = yahH + pad * 2;
-            // Rounded rect
-            const r = 5;
+            const r = 4;
             ctx.beginPath();
             ctx.moveTo(bubbleX + r, bubbleY);
             ctx.lineTo(bubbleX + bubbleW - r, bubbleY);
@@ -442,46 +459,47 @@ export class MapScene {
             ctx.closePath();
             ctx.fill();
 
-            // Pointer triangle down to the dot
+            // Pointer triangle
+            const ptrX = targetPos.x + 15;
+            const clampedPtrX = Math.max(bubbleX + 10, Math.min(ptrX, bubbleX + bubbleW - 10));
             ctx.beginPath();
-            ctx.moveTo(targetPos.x - 6, bubbleY + bubbleH);
-            ctx.lineTo(targetPos.x + 6, bubbleY + bubbleH);
-            ctx.lineTo(targetPos.x, bubbleY + bubbleH + 10);
+            ctx.moveTo(clampedPtrX - 5, bubbleY + bubbleH);
+            ctx.lineTo(clampedPtrX + 5, bubbleY + bubbleH);
+            ctx.lineTo(clampedPtrX, bubbleY + bubbleH + 8);
             ctx.closePath();
             ctx.fill();
 
             // Text
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(yahText, yahX, yahY + bob, yahW, yahH);
+            ctx.drawImage(yahText, clampedX, clampedY + bob, yahW, yahH);
             ctx.restore();
         }
 
         // --- Title "RUTA COSTERA" in gold at top ---
-        const titleScale = scale * 1.3;
+        const titleScale = scale * 1.2;
         const titleW = this._titleText.width * titleScale;
         const titleH = this._titleText.height * titleScale;
         const titleX = (W - titleW) / 2;
-        const titleY = 20;
+        const titleY = 12;
 
         ctx.save();
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(this._titleText, titleX, titleY, titleW, titleH);
-        // Gold tint
         ctx.globalCompositeOperation = 'source-atop';
         ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
         ctx.fillRect(titleX, titleY, titleW, titleH);
         ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
 
-        // --- "TOCA O PULSA ENTER" instruction (pulsing, after animation) ---
+        // --- "TOCA O PULSA ENTER" instruction ---
         if (this.canProceed) {
-            const instrScale = scale * 0.65;
+            const instrScale = scale * 0.55;
             const instrW = this._continueText.width * instrScale;
             const instrH = this._continueText.height * instrScale;
             ctx.save();
             ctx.globalAlpha = this.instructionAlpha;
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(this._continueText, (W - instrW) / 2, H - instrH - 25, instrW, instrH);
+            ctx.drawImage(this._continueText, (W - instrW) / 2, H - instrH - 15, instrW, instrH);
             ctx.restore();
         }
 
@@ -498,12 +516,10 @@ export class MapScene {
     }
 
     onClick(x, y) {
-        // Check music button
         if (this._musicBounds && this._hitTest(x, y, this._musicBounds)) {
             this.game.toggleMusic();
             return;
         }
-
         if (this.canProceed) {
             this._advance();
         }

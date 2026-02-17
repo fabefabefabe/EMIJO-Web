@@ -410,7 +410,7 @@ export class Player {
             case STATES.FALLING_IN_HOLE:
                 return this.textures.idle; // Not drawn (visible=false)
             case STATES.DRINKING_MATE:
-                return this.textures.idle; // Standing still while drinking
+                return this.textures.crouch; // Crouching to drink mate
             default:
                 return this.textures.idle;
         }
@@ -515,15 +515,30 @@ export class Player {
 
         // Draw mate sprite next to player during drinking phase
         if (this.state === STATES.DRINKING_MATE && matePickupTex) {
-            const mateScale = scale * 0.8;
+            const mateScale = scale * 1.2;
             const mateW = matePickupTex.width * mateScale;
             const mateH = matePickupTex.height * mateScale;
-            // Position mate to the right of the player, at chest height
-            const mateX = drawX + w + 2;
-            const mateY = screenY + h * 0.3;
+            // Position mate at the player's face/mouth level (tilted towards mouth)
+            const mateX = drawX + w * 0.6;
+            const mateY = screenY + h * 0.05;
             ctx.save();
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(matePickupTex, mateX, mateY, mateW, mateH);
+
+            // Steam/sparkle particles rising from the mate
+            const drinkTime = this.gauchoPowerTimer;
+            const numParticles = 5;
+            for (let pi = 0; pi < numParticles; pi++) {
+                const seed = pi * 137.5; // golden angle spread
+                const lifeT = ((drinkTime * 2 + pi * 0.3) % 1.0);
+                const px = mateX + mateW * 0.4 + Math.sin(seed + drinkTime * 4) * 6;
+                const py = mateY - lifeT * 25;
+                const pAlpha = (1 - lifeT) * 0.8;
+                const pSize = 2 + lifeT * 2;
+                ctx.globalAlpha = pAlpha;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(px, py, pSize, pSize);
+            }
             ctx.restore();
         }
     }
