@@ -1,74 +1,105 @@
 // Map Scene - shows Uruguay's coastal route between city transitions
-import { Config, CITY_DATA, getCityForLevel } from '../config.js';
+import { Config, CITY_DATA, getCityForLevel, isBeachLevel } from '../config.js';
 import * as TC from '../textureCache.js';
 
-// City positions on the canvas (960×540) — SW→NE along coast
+// City positions on the canvas (960×540)
+// Inverted: land (green) on top, ocean (blue) on bottom
+// Route goes from left (Montevideo) to right (Barra del Chuy)
+// Coast line runs diagonally from upper-left to lower-right
 const CITY_POSITIONS = [
-    { x: 100, y: 440 },   // Montevideo
-    { x: 170, y: 420 },   // Ciudad de la Costa
-    { x: 230, y: 400 },   // REPUBLICA del Pinar
-    { x: 290, y: 385 },   // Atlantida
-    { x: 340, y: 365 },   // Jaureguiberry
-    { x: 380, y: 345 },   // Santa Ana
-    { x: 420, y: 320 },   // Piriapolis
-    { x: 470, y: 295 },   // CHIUAUA
-    { x: 520, y: 275 },   // Punta del Este
-    { x: 580, y: 250 },   // Jose Ignacio
-    { x: 640, y: 225 },   // La Paloma
-    { x: 700, y: 200 },   // Cabo Polonio
-    { x: 760, y: 170 },   // Punta del Diablo
-    { x: 810, y: 145 },   // La Coronilla
-    { x: 860, y: 120 },   // Barra del Chuy
+    { x: 65,  y: 155 },   // Montevideo
+    { x: 130, y: 185 },   // Ciudad de la Costa
+    { x: 200, y: 210 },   // REPUBLICA del Pinar
+    { x: 270, y: 235 },   // Atlantida
+    { x: 340, y: 255 },   // Jaureguiberry
+    { x: 410, y: 275 },   // Santa Ana
+    { x: 480, y: 295 },   // Piriapolis
+    { x: 545, y: 310 },   // CHIUAUA
+    { x: 610, y: 325 },   // Punta del Este
+    { x: 670, y: 340 },   // Jose Ignacio
+    { x: 730, y: 355 },   // La Paloma
+    { x: 785, y: 368 },   // Cabo Polonio
+    { x: 835, y: 380 },   // Punta del Diablo
+    { x: 880, y: 390 },   // La Coronilla
+    { x: 925, y: 400 },   // Barra del Chuy
 ];
 
-// Coast polygon (land mass, green area) — rough Uruguay coast shape
+// Label placement for each city: direction from dot + custom offset
+// 'above' = label above dot, 'below' = label below dot
+// 'left' = label to the left, 'right' = label to the right
+const LABEL_PLACEMENT = [
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // Montevideo
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // Ciudad de la Costa
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // REPUBLICA del Pinar
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // Atlantida
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // Jaureguiberry
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // Santa Ana
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // Piriapolis
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // CHIUAUA
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // Punta del Este
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // Jose Ignacio
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // La Paloma
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // Cabo Polonio
+    { side: 'above', offsetX: 0,   offsetY: -8 },   // Punta del Diablo
+    { side: 'below', offsetX: 10,  offsetY: 8 },    // La Coronilla
+    { side: 'above', offsetX: -20, offsetY: -8 },   // Barra del Chuy
+];
+
+// Coast polygon (land mass, green area) — fills from top edge down to coast
 const COAST_POLYGON = [
-    { x: 0, y: 540 },
-    { x: 0, y: 400 },
-    { x: 40, y: 410 },
-    { x: 80, y: 430 },
-    { x: 100, y: 425 },
-    { x: 150, y: 405 },
-    { x: 200, y: 385 },
-    { x: 260, y: 370 },
-    { x: 310, y: 350 },
-    { x: 360, y: 330 },
-    { x: 400, y: 305 },
-    { x: 450, y: 280 },
-    { x: 500, y: 260 },
-    { x: 560, y: 235 },
-    { x: 620, y: 210 },
-    { x: 680, y: 185 },
-    { x: 740, y: 155 },
-    { x: 790, y: 130 },
-    { x: 840, y: 105 },
-    { x: 880, y: 90 },
-    { x: 920, y: 80 },
-    { x: 960, y: 70 },
-    { x: 960, y: 540 },
+    { x: 0,   y: 0 },
+    { x: 960, y: 0 },
+    { x: 960, y: 430 },
+    { x: 920, y: 420 },
+    { x: 870, y: 410 },
+    { x: 820, y: 398 },
+    { x: 770, y: 385 },
+    { x: 720, y: 372 },
+    { x: 660, y: 358 },
+    { x: 600, y: 342 },
+    { x: 535, y: 325 },
+    { x: 470, y: 310 },
+    { x: 400, y: 292 },
+    { x: 330, y: 272 },
+    { x: 260, y: 250 },
+    { x: 190, y: 225 },
+    { x: 120, y: 200 },
+    { x: 60,  y: 170 },
+    { x: 0,   y: 140 },
 ];
 
-// Coastline points (the shore edge — offset from polygon)
+// Inner land gradient polygon (lighter green, higher up)
+const INNER_LAND = [
+    { x: 0,   y: 0 },
+    { x: 960, y: 0 },
+    { x: 960, y: 380 },
+    { x: 800, y: 350 },
+    { x: 600, y: 300 },
+    { x: 400, y: 245 },
+    { x: 200, y: 180 },
+    { x: 0,   y: 100 },
+];
+
+// Coastline points (sand/beach line at edge of land)
 const COASTLINE = [
-    { x: 60, y: 450 },
-    { x: 100, y: 445 },
-    { x: 140, y: 430 },
-    { x: 190, y: 410 },
-    { x: 240, y: 395 },
-    { x: 290, y: 377 },
-    { x: 330, y: 358 },
-    { x: 370, y: 338 },
-    { x: 410, y: 315 },
-    { x: 455, y: 290 },
-    { x: 510, y: 268 },
-    { x: 565, y: 245 },
-    { x: 625, y: 220 },
-    { x: 685, y: 195 },
-    { x: 745, y: 165 },
-    { x: 800, y: 140 },
-    { x: 845, y: 115 },
-    { x: 890, y: 98 },
-    { x: 940, y: 85 },
+    { x: 0,   y: 150 },
+    { x: 50,  y: 165 },
+    { x: 100, y: 185 },
+    { x: 150, y: 205 },
+    { x: 210, y: 225 },
+    { x: 270, y: 245 },
+    { x: 340, y: 265 },
+    { x: 410, y: 285 },
+    { x: 475, y: 305 },
+    { x: 540, y: 320 },
+    { x: 605, y: 337 },
+    { x: 665, y: 352 },
+    { x: 725, y: 367 },
+    { x: 780, y: 380 },
+    { x: 830, y: 393 },
+    { x: 875, y: 405 },
+    { x: 925, y: 416 },
+    { x: 960, y: 425 },
 ];
 
 export class MapScene {
@@ -113,6 +144,9 @@ export class MapScene {
 
         // Pre-render city name texts
         this._cityTexts = CITY_DATA.map(c => TC.renderText(c.name.toUpperCase()));
+
+        // Play map music
+        this.game.music.playTrack('map');
     }
 
     _getCityIndex(level) {
@@ -158,7 +192,9 @@ export class MapScene {
     }
 
     _advance() {
-        this.game.music.playTrack('game');
+        const nextLevel = this.game.state.currentLevel || 1;
+        const track = isBeachLevel(nextLevel) ? 'beach' : 'game';
+        this.game.music.playTrack(track);
         this.game.setScene('game');
     }
 
@@ -167,15 +203,15 @@ export class MapScene {
         const H = Config.sceneHeight;
         const scale = Config.pixelScale;
 
-        // --- Ocean background ---
+        // --- Ocean background (below coast) ---
         ctx.fillStyle = '#0a1e3d';
         ctx.fillRect(0, 0, W, H);
 
-        // --- Ocean subtle wave texture ---
+        // --- Ocean subtle wave texture (only in lower portion) ---
         ctx.save();
         ctx.globalAlpha = 0.08;
         const waveTime = performance.now() / 1000;
-        for (let wy = 0; wy < H; wy += 30) {
+        for (let wy = 160; wy < H; wy += 30) {
             const waveOff = Math.sin(waveTime + wy * 0.03) * 8;
             ctx.strokeStyle = '#3a6ea5';
             ctx.lineWidth = 1;
@@ -189,7 +225,7 @@ export class MapScene {
         }
         ctx.restore();
 
-        // --- Land mass (green polygon) ---
+        // --- Land mass (green polygon, covers top portion) ---
         ctx.fillStyle = '#1a4d1a';
         ctx.beginPath();
         ctx.moveTo(COAST_POLYGON[0].x, COAST_POLYGON[0].y);
@@ -199,19 +235,15 @@ export class MapScene {
         ctx.closePath();
         ctx.fill();
 
-        // --- Inner land gradient (lighter green towards center) ---
+        // --- Inner land gradient (lighter green towards interior) ---
         ctx.save();
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = '#2a6d2a';
         ctx.beginPath();
-        ctx.moveTo(0, 540);
-        ctx.lineTo(0, 440);
-        ctx.lineTo(200, 430);
-        ctx.lineTo(400, 370);
-        ctx.lineTo(600, 280);
-        ctx.lineTo(800, 190);
-        ctx.lineTo(960, 130);
-        ctx.lineTo(960, 540);
+        ctx.moveTo(INNER_LAND[0].x, INNER_LAND[0].y);
+        for (let i = 1; i < INNER_LAND.length; i++) {
+            ctx.lineTo(INNER_LAND[i].x, INNER_LAND[i].y);
+        }
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -314,7 +346,7 @@ export class MapScene {
                 dotColor = '#ffd700'; // gold
                 dotRadius = 5;
             } else {
-                dotColor = '#666666'; // gray
+                dotColor = '#888888'; // gray (brighter for visibility on dark ocean)
                 dotRadius = 4;
             }
 
@@ -336,20 +368,30 @@ export class MapScene {
             ctx.fill();
 
             // Dot border
-            ctx.strokeStyle = isTarget ? '#ffffff' : (isVisited || isFirst ? '#b8860b' : '#444444');
+            ctx.strokeStyle = isTarget ? '#ffffff' : (isVisited || isFirst ? '#b8860b' : '#555555');
             ctx.lineWidth = 1.5;
             ctx.stroke();
 
-            // City name
+            // City name label
             const cityText = this._cityTexts[i];
-            const nameScale = scale * 0.45;
+            const nameScale = scale * 0.4;
             const nameW = cityText.width * nameScale;
             const nameH = cityText.height * nameScale;
 
-            // Alternate above/below to avoid overlap
-            const above = (i % 2 === 0);
-            const nameX = pos.x - nameW / 2;
-            const nameY = above ? pos.y - dotRadius - nameH - 4 : pos.y + dotRadius + 4;
+            // Use per-city placement to avoid overlaps
+            const placement = LABEL_PLACEMENT[i];
+            let nameX, nameY;
+            if (placement.side === 'above') {
+                nameX = pos.x - nameW / 2 + placement.offsetX;
+                nameY = pos.y - dotRadius - nameH + placement.offsetY;
+            } else {
+                nameX = pos.x - nameW / 2 + placement.offsetX;
+                nameY = pos.y + dotRadius + placement.offsetY;
+            }
+
+            // Clamp to canvas bounds
+            if (nameX < 4) nameX = 4;
+            if (nameX + nameW > W - 4) nameX = W - 4 - nameW;
 
             ctx.save();
             ctx.imageSmoothingEnabled = false;
@@ -359,7 +401,7 @@ export class MapScene {
             } else if (isVisited || isFirst) {
                 ctx.globalAlpha = 0.85;
             } else {
-                ctx.globalAlpha = 0.45;
+                ctx.globalAlpha = 0.5;
             }
 
             ctx.drawImage(cityText, nameX, nameY, nameW, nameH);
@@ -375,7 +417,7 @@ export class MapScene {
             ctx.restore();
         }
 
-        // --- "TU ESTAS AQUI" marker (first map only, or always on target city for level 1) ---
+        // --- "TU ESTAS AQUI" marker (first map only) ---
         if (this.isFirstMap && this.canProceed) {
             const targetPos = CITY_POSITIONS[this.targetCityIndex];
             const yahText = this._youAreHereText;

@@ -40,6 +40,8 @@ export class MusicSystem {
         // Generate patterns
         this._generateMenuMusic();
         this._generateGameMusic();
+        this._generateBeachMusic();
+        this._generateMapMusic();
         this._generateGameOverMusic();
         this._generateVictoryMusic();
     }
@@ -236,6 +238,228 @@ export class MusicSystem {
 
             // OUTRO
             n.G4, R, n.F4, R, n.E4, R, n.D4, R,
+        ];
+    }
+
+    // ==========================================
+    // BEACH MUSIC - Outrun "Passing Breeze" style
+    // Key: Bb Major, Latin/bossa feel, bright synth melody
+    // 128 beats = ~51 seconds (same as game music)
+    // ==========================================
+    _generateBeachMusic() {
+        const n = this.notes, R = this.R;
+
+        // Bb Major scale: Bb C D Eb F G A
+        // Using available notes - transpose to C but with a breezy jazz feel
+        // Passing Breeze vibe: upbeat, syncopated, jazzy intervals, major 7ths
+
+        // Structure: Intro(8) + A(16) + A2(16) + B(16) + A(16) + Bridge(16) + A3(16) + C(16) + Outro(8)
+        this.beachMelody = [
+            // INTRO (8 beats) - Breezy ascending run
+            n.G4, R, n.A4, n.B4, n.C5, R, n.E5, R,
+
+            // SECTION A - Main hook: bright, syncopated, jazzy (16 beats)
+            // Passing Breeze-style melody: major 7th leaps, latin rhythm
+            n.G5, R, n.E5, R, n.D5, n.E5, n.G5, R,
+            n.A5, R, n.G5, R, n.E5, R, R, R,
+
+            // SECTION A2 - Variation with higher reach (16 beats)
+            n.G5, R, n.E5, R, n.D5, n.E5, n.G5, R,
+            n.A5, n.B5, n.A5, R, n.G5, R, n.E5, R,
+
+            // SECTION B - Contrasting phrase, bossa feel (16 beats)
+            n.C5, R, n.D5, R, n.E5, n.G5, n.E5, R,
+            n.D5, R, n.C5, R, n.A4, R, R, R,
+            n.C5, R, n.D5, R, n.E5, n.G5, n.A5, R,
+            n.G5, R, n.E5, R, n.D5, R, R, R,
+
+            // SECTION A return (16 beats)
+            n.G5, R, n.E5, R, n.D5, n.E5, n.G5, R,
+            n.A5, R, n.G5, R, n.E5, R, R, R,
+
+            // BRIDGE - Build up, climbing (16 beats)
+            n.E5, R, n.F5, R, n.G5, R, n.A5, R,
+            n.B5, R, n.A5, R, n.G5, R, n.F5, R,
+            n.E5, R, n.D5, R, n.E5, R, n.G5, R,
+            n.A5, R, n.G5, R, n.E5, R, R, R,
+
+            // SECTION A3 - Hook returns bright (16 beats)
+            n.G5, R, n.E5, R, n.D5, n.E5, n.G5, R,
+            n.A5, R, n.G5, R, n.E5, R, n.D5, R,
+
+            // SECTION C - Climax, energetic runs (16 beats)
+            n.C6, R, n.B5, n.A5, n.G5, R, n.E5, R,
+            n.G5, n.A5, n.G5, n.E5, n.D5, R, R, R,
+            n.E5, n.G5, n.A5, n.B5, n.C6, R, n.A5, R,
+            n.G5, R, R, R, n.E5, R, R, R,
+
+            // OUTRO (8 beats) - Breezy descend, loops back
+            n.G5, R, n.E5, R, n.D5, R, n.C5, R,
+        ];
+
+        // Bass line - Syncopated latin/bossa pattern, root-5th movement
+        this.beachBass = [
+            // INTRO
+            n.C3, R, R, R, n.G3, R, n.C3, R,
+
+            // SECTION A (C Major)
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+            n.F3, R, R, n.C3, R, R, n.G3, R,
+
+            // SECTION A2
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+            n.F3, R, R, n.C3, R, R, n.G3, R,
+
+            // SECTION B (Am → F → C → G)
+            n.A3, R, R, n.E3, R, R, n.A3, R,
+            n.F3, R, R, n.C3, R, R, n.F3, R,
+            n.A3, R, R, n.E3, R, R, n.A3, R,
+            n.G3, R, R, n.D3, R, R, n.G3, R,
+
+            // SECTION A
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+            n.F3, R, R, n.C3, R, R, n.G3, R,
+
+            // BRIDGE (F → G → C → Am)
+            n.F3, R, R, n.C3, R, R, n.F3, R,
+            n.G3, R, R, n.D3, R, R, n.G3, R,
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+            n.A3, R, R, n.E3, R, R, n.A3, R,
+
+            // SECTION A3
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+            n.F3, R, R, n.C3, R, R, n.G3, R,
+
+            // SECTION C
+            n.C3, R, R, n.G3, R, R, n.F3, R,
+            n.G3, R, R, n.D3, R, R, n.G3, R,
+            n.C3, R, R, n.G3, R, R, n.F3, R,
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+
+            // OUTRO
+            n.C3, R, R, n.G3, R, R, n.C3, R,
+        ];
+
+        // Drums - Latin/bossa feel: lighter kick, more hihat, syncopated
+        // 0=none, 1=kick, 2=snare, 3=hihat, 4=kick+hihat, 5=snare+hihat
+        const bossa1 = [4, 3, 3, 5, 3, 4, 3, 3];  // bossa nova pattern
+        const bossa2 = [4, 3, 5, 3, 3, 4, 5, 3];  // variation
+        const bossaFill = [4, 4, 5, 3, 4, 5, 4, 5];
+
+        this.beachDrums = [
+            ...bossa1, // intro
+            ...bossa1, ...bossa2, // A
+            ...bossa1, ...bossa2, // A2
+            ...bossa1, ...bossa2, // B
+            ...bossa2, ...bossa1, // B
+            ...bossa1, ...bossa2, // A
+            ...bossa2, ...bossa1, // Bridge
+            ...bossa1, ...bossa2, // Bridge
+            ...bossa1, ...bossa2, // A3
+            ...bossa1, ...bossaFill, // C
+            ...bossa2, ...bossa1, // C
+            ...bossa1, // outro
+        ];
+
+        // Harmony - Jazzy chord pads, major 7th voicings
+        this.beachHarmony = [
+            // INTRO
+            n.E4, R, n.E4, R, n.E4, R, n.E4, R,
+
+            // SECTION A (Cmaj7 → Fmaj7)
+            n.E4, R, n.B4, R, n.E4, R, n.B4, R,
+            n.A4, R, n.E4, R, n.A4, R, n.B4, R,
+
+            // SECTION A2
+            n.E4, R, n.B4, R, n.E4, R, n.B4, R,
+            n.A4, R, n.E4, R, n.A4, R, n.B4, R,
+
+            // SECTION B (Am7 → Fmaj7 → Am7 → G)
+            n.C4, R, n.E4, R, n.C4, R, n.E4, R,
+            n.A4, R, n.F4, R, n.A4, R, n.F4, R,
+            n.C4, R, n.E4, R, n.C4, R, n.E4, R,
+            n.B4, R, n.D4, R, n.B4, R, n.D4, R,
+
+            // SECTION A
+            n.E4, R, n.B4, R, n.E4, R, n.B4, R,
+            n.A4, R, n.E4, R, n.A4, R, n.B4, R,
+
+            // BRIDGE
+            n.A4, R, n.F4, R, n.A4, R, n.F4, R,
+            n.B4, R, n.D4, R, n.B4, R, n.D4, R,
+            n.E4, R, n.G4, R, n.E4, R, n.G4, R,
+            n.C4, R, n.E4, R, n.C4, R, n.E4, R,
+
+            // SECTION A3
+            n.E4, R, n.B4, R, n.E4, R, n.B4, R,
+            n.A4, R, n.E4, R, n.A4, R, n.B4, R,
+
+            // SECTION C
+            n.E4, R, n.G4, R, n.A4, R, n.E4, R,
+            n.D4, R, n.B4, R, n.D4, R, n.B4, R,
+            n.E4, R, n.G4, R, n.A4, R, n.E4, R,
+            n.E4, R, n.G4, R, n.E4, R, n.G4, R,
+
+            // OUTRO
+            n.E4, R, n.D4, R, n.C4, R, n.B4, R,
+        ];
+    }
+
+    // ==========================================
+    // MAP MUSIC - Calm, adventurous exploration
+    // Key: C Major, gentle arpeggios + warm bass
+    // 48 beats = ~19 seconds loop
+    // ==========================================
+    _generateMapMusic() {
+        const n = this.notes, R = this.R;
+
+        // Gentle, adventurous feel — map/travel vibe
+        // Slower perceived pace, arpeggiated chords, warm
+        this.mapMelody = [
+            // Bar 1-2: C Major arpeggio (warm welcome)
+            n.C4, R, n.E4, R, n.G4, R, n.C5, R,
+            n.G4, R, n.E4, R, n.C4, R, R, R,
+
+            // Bar 3-4: Am → gentle motion
+            n.A3, R, n.C4, R, n.E4, R, n.A4, R,
+            n.E4, R, n.C4, R, n.A3, R, R, R,
+
+            // Bar 5-6: F Major (hopeful)
+            n.F3, R, n.A3, R, n.C4, R, n.F4, R,
+            n.C4, R, n.A3, R, n.F3, R, R, R,
+
+            // Bar 7-8: G → back home (dominant pull)
+            n.G3, R, n.B3, R, n.D4, R, n.G4, R,
+            n.D4, R, n.B3, R, n.G3, R, R, R,
+
+            // Bar 9-10: Em (mysterious touch)
+            n.E4, R, n.G4, R, n.B4, R, n.E5, R,
+            n.B4, R, n.G4, R, n.E4, R, R, R,
+
+            // Bar 11-12: F → G (resolution cadence)
+            n.F4, R, n.A4, R, n.C5, R, n.F4, R,
+            n.G4, R, n.B4, R, n.D5, R, n.G4, R,
+        ];
+
+        this.mapBass = [
+            // Warm, sustained root notes
+            n.C3, R, R, R, n.C3, R, R, R,
+            n.C3, R, R, R, n.G3, R, R, R,
+
+            n.A3, R, R, R, n.A3, R, R, R,
+            n.A3, R, R, R, n.E3, R, R, R,
+
+            n.F3, R, R, R, n.F3, R, R, R,
+            n.F3, R, R, R, n.C3, R, R, R,
+
+            n.G3, R, R, R, n.G3, R, R, R,
+            n.G3, R, R, R, n.D3, R, R, R,
+
+            n.E3, R, R, R, n.E3, R, R, R,
+            n.E3, R, R, R, n.B3, R, R, R,
+
+            n.F3, R, R, R, n.F3, R, R, R,
+            n.G3, R, R, R, n.G3, R, R, R,
         ];
     }
 
@@ -729,6 +953,10 @@ export class MusicSystem {
             return this.menuMelody.length;
         } else if (this.currentTrack === 'game') {
             return this.gameMelody.length;
+        } else if (this.currentTrack === 'beach') {
+            return this.beachMelody.length;
+        } else if (this.currentTrack === 'map') {
+            return this.mapMelody.length;
         }
         return 64;
     }
@@ -738,6 +966,10 @@ export class MusicSystem {
             this._playMenuBeat(beat, time);
         } else if (this.currentTrack === 'game') {
             this._playGameBeat(beat, time);
+        } else if (this.currentTrack === 'beach') {
+            this._playBeachBeat(beat, time);
+        } else if (this.currentTrack === 'map') {
+            this._playMapBeat(beat, time);
         }
     }
 
@@ -779,6 +1011,47 @@ export class MusicSystem {
             if (drum === 1 || drum === 4) this._playKick(time);
             if (drum === 2 || drum === 5) this._playSnare(time);
             if (drum === 3 || drum === 4 || drum === 5) this._playHihat(time);
+        }
+    }
+
+    _playBeachBeat(beat, time) {
+        const idx = beat % this.beachMelody.length;
+
+        // Main melody - bright square wave (slightly louder, Outrun style)
+        if (this.beachMelody[idx] > 0) {
+            this._playSquareWave(this.beachMelody[idx], time, 0.14, 0.13);
+        }
+
+        // Bass - triangle wave, syncopated bossa pattern
+        if (this.beachBass[idx] > 0) {
+            this._playTriangleWave(this.beachBass[idx], time, 0.22, 0.16);
+        }
+
+        // Harmony - jazzy chord pads (pulse wave for richness)
+        if (this.beachHarmony && this.beachHarmony[idx] > 0) {
+            this._playPulseWave(this.beachHarmony[idx], time, 0.16, 0.07);
+        }
+
+        // Drums - bossa nova pattern
+        if (this.beachDrums && this.beachDrums[idx]) {
+            const drum = this.beachDrums[idx];
+            if (drum === 1 || drum === 4) this._playKick(time);
+            if (drum === 2 || drum === 5) this._playSnare(time);
+            if (drum === 3 || drum === 4 || drum === 5) this._playHihat(time);
+        }
+    }
+
+    _playMapBeat(beat, time) {
+        const idx = beat % this.mapMelody.length;
+
+        // Melody - soft triangle wave (calm, warm)
+        if (this.mapMelody[idx] > 0) {
+            this._playTriangleWave(this.mapMelody[idx], time, 0.25, 0.09);
+        }
+
+        // Bass - very soft triangle wave
+        if (this.mapBass[idx] > 0) {
+            this._playTriangleWave(this.mapBass[idx], time, 0.35, 0.07);
         }
     }
 

@@ -1,5 +1,5 @@
 // Level Complete Scene - victory screen with celebration
-import { Config, getCityForLevel } from '../config.js';
+import { Config, getCityForLevel, isBeachLevel } from '../config.js';
 
 import * as TC from '../textureCache.js';
 
@@ -101,7 +101,8 @@ export class LevelCompleteScene {
                 // Show map scene before entering the new city
                 this.game.setScene('map');
             } else {
-                this.game.music.playTrack('game');
+                const track = isBeachLevel(nextLevel) ? 'beach' : 'game';
+                this.game.music.playTrack(track);
                 this.game.setScene('game');
             }
         }
