@@ -32,24 +32,25 @@ const CITY_POSITIONS_VIRTUAL = [
     { x: 1145, y: 498 },   // 14 Barra del Chuy
 ];
 
-// Label placement offsets from dot in virtual coords
-// above = negative labelY, below = positive labelY
+// Label placement: side='left' means label ends to LEFT of dot,
+// side='right' means label starts to RIGHT of dot.
+// yOff: vertical offset from dot center (negative=above, positive=below)
 const LABEL_PLACEMENT = [
-    { labelX: 12,  labelY: -22 },  // 0  Montevideo — above
-    { labelX: 12,  labelY: 12 },   // 1  Ciudad de la Costa — below
-    { labelX: 12,  labelY: -22 },  // 2  REP del Pinar — above
-    { labelX: 12,  labelY: 12 },   // 3  Atlantida — below
-    { labelX: 12,  labelY: -22 },  // 4  Jaureguiberry — above
-    { labelX: 12,  labelY: 12 },   // 5  Santa Ana — below
-    { labelX: 12,  labelY: -22 },  // 6  Piriapolis — above
-    { labelX: 12,  labelY: 12 },   // 7  CHIUAUA — below
-    { labelX: 12,  labelY: -22 },  // 8  Punta del Este — above
-    { labelX: 12,  labelY: 12 },   // 9  Jose Ignacio — below
-    { labelX: 12,  labelY: -22 },  // 10 La Paloma — above
-    { labelX: 12,  labelY: 12 },   // 11 Cabo Polonio — below
-    { labelX: 12,  labelY: -22 },  // 12 Punta del Diablo — above
-    { labelX: 12,  labelY: 12 },   // 13 La Coronilla — below
-    { labelX: -95, labelY: -22 },  // 14 Barra del Chuy — above left
+    { side: 'right', yOff: -14 },  // 0  Montevideo
+    { side: 'left',  yOff: 6 },    // 1  Ciudad de la Costa
+    { side: 'right', yOff: -14 },  // 2  REP del Pinar
+    { side: 'left',  yOff: 6 },    // 3  Atlantida
+    { side: 'right', yOff: -14 },  // 4  Jaureguiberry
+    { side: 'left',  yOff: 6 },    // 5  Santa Ana
+    { side: 'right', yOff: -14 },  // 6  Piriapolis
+    { side: 'left',  yOff: 6 },    // 7  CHIUAUA
+    { side: 'right', yOff: -14 },  // 8  Punta del Este
+    { side: 'left',  yOff: 6 },    // 9  Jose Ignacio
+    { side: 'right', yOff: -14 },  // 10 La Paloma
+    { side: 'left',  yOff: 6 },    // 11 Cabo Polonio
+    { side: 'right', yOff: -14 },  // 12 Punta del Diablo
+    { side: 'left',  yOff: 6 },    // 13 La Coronilla
+    { side: 'left',  yOff: -14 },  // 14 Barra del Chuy
 ];
 
 // Coast polygon in virtual coords (land mass from top)
@@ -387,15 +388,21 @@ export class MapScene {
             ctx.lineWidth = 1.2;
             ctx.stroke();
 
-            // City name label
+            // City name label — white text
             const cityText = this._cityTexts[i];
             const nameW = cityText.width * textScale;
             const nameH = cityText.height * textScale;
 
-            // Position using label placement offsets (scaled)
+            // Position: left side = label ends before dot, right side = label starts after dot
             const placement = LABEL_PLACEMENT[i];
-            let nameX = pos.x + placement.labelX * ms;
-            let nameY = pos.y + placement.labelY * ms;
+            const gap = 8; // gap between dot edge and label
+            let nameX, nameY;
+            if (placement.side === 'left') {
+                nameX = pos.x - gap - nameW; // label to the left
+            } else {
+                nameX = pos.x + gap; // label to the right
+            }
+            nameY = pos.y + placement.yOff;
 
             // Clamp to canvas bounds
             if (nameX < 4) nameX = 4;
@@ -409,9 +416,9 @@ export class MapScene {
             if (isTarget) {
                 ctx.globalAlpha = 1.0;
             } else if (isVisited || isFirst) {
-                ctx.globalAlpha = 0.9;
+                ctx.globalAlpha = 1.0;
             } else {
-                ctx.globalAlpha = 0.55;
+                ctx.globalAlpha = 0.75;
             }
 
             ctx.drawImage(cityText, nameX, nameY, nameW, nameH);
