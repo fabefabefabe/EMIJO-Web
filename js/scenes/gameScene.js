@@ -116,10 +116,9 @@ export class GameScene {
         this.ammoPickups = [];
         this._spawnFixedAmmo();
 
-        // Joggers & Skaters (level 3+, alternating)
+        // Joggers & Skaters (level 3+)
         this.joggers = [];
         this.skaters = [];
-        this.npcSpawnToggle = false; // false=jogger, true=skater
         this.joggerSpawnTimer = 0;
         this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
 
@@ -254,6 +253,7 @@ export class GameScene {
 
     /**
      * Spawn mate pickups at intervals (low probability per interval).
+     * Level 2: guaranteed one mate pickup at a random position.
      */
     _spawnMatePickups() {
         const intervalPx = Config.mateSpawnIntervalMeters / Config.metersPerPixel;
@@ -263,6 +263,15 @@ export class GameScene {
                 const y = Config.groundSurface; // on the ground (easy to grab)
                 this.matePickups.push(new MatePickup(x, y));
             }
+        }
+
+        // Level 2: guarantee at least one mate pickup
+        if (this.currentLevel === 2 && this.matePickups.length === 0) {
+            // Place it somewhere in the middle third of the level
+            const minX = this.flag.x * 0.3;
+            const maxX = this.flag.x * 0.65;
+            const mateX = minX + Math.random() * (maxX - minX);
+            this.matePickups.push(new MatePickup(mateX, Config.groundSurface));
         }
     }
 
@@ -796,7 +805,7 @@ export class GameScene {
         this.joggers = this.joggers.filter(j => j.alive && j.x > cullX);
         this.skaters = this.skaters.filter(s => s.alive && s.x > cullX);
 
-        // Spawn joggers/skaters (level 3+, alternating; no skaters on beach; no jogger if tree visible)
+        // Spawn joggers/skaters (level 3+; skaters less frequent; no overlap before level 50)
         if (this.currentLevel >= Config.joggerMinLevel) {
             this.joggerSpawnTimer += dt;
             if (this.joggerSpawnTimer >= this.joggerNextSpawnAt) {
@@ -812,12 +821,34 @@ export class GameScene {
                 } else {
                     this.joggerSpawnTimer = 0;
                     this.joggerNextSpawnAt = Config.joggerBaseSpawnInterval * (0.75 + Math.random() * 0.5);
-                    if (this.npcSpawnToggle && !this.isBeach) {
-                        this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
+
+                    // Decide jogger vs skater:
+                    // Skaters: ~30% chance (less frequent than joggers), no beach
+                    const wantsSkater = !this.isBeach && Math.random() < 0.3;
+
+                    // Before level 50: no overlap — skip if the other type is on screen
+                    if (this.currentLevel < 50) {
+                        const joggerOnScreen = this.joggers.some(j =>
+                            !j.knocked && j.x > this.camera.offset - 50 && j.x < this.camera.offset + Config.sceneWidth + 50
+                        );
+                        const skaterOnScreen = this.skaters.some(s =>
+                            !s.knocked && s.x > this.camera.offset - 50 && s.x < this.camera.offset + Config.sceneWidth + 50
+                        );
+
+                        if (wantsSkater && !joggerOnScreen) {
+                            this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
+                        } else if (!wantsSkater && !skaterOnScreen) {
+                            this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                        }
+                        // If overlap would occur, skip this spawn entirely
                     } else {
-                        this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                        // Level 50+: can coexist on screen
+                        if (wantsSkater) {
+                            this.skaters.push(Skater.spawnRandom(this.camera.offset, Config.groundSurface));
+                        } else {
+                            this.joggers.push(Jogger.spawnRandom(this.camera.offset, Config.groundSurface));
+                        }
                     }
-                    this.npcSpawnToggle = !this.npcSpawnToggle;
                 }
             }
         }
@@ -991,14 +1022,16 @@ export class GameScene {
         // Draw dogs at every 100m marker (AFTER obstacles so dog appears in front of tree)
         this._drawDogMarkers(ctx, camX);
 
-        // Draw joggers
+        // Draw joggers (with tree/umbrella shadow overlay)
         for (const jogger of this.joggers) {
             jogger.draw(ctx, camX);
+            this._drawTreeShadowOverlay(ctx, camX, jogger);
         }
 
-        // Draw skaters
+        // Draw skaters (with tree/umbrella shadow overlay)
         for (const skater of this.skaters) {
             skater.draw(ctx, camX);
+            this._drawTreeShadowOverlay(ctx, camX, skater);
         }
 
         // Draw bonfires (with glow and sparks)
@@ -1030,6 +1063,7 @@ export class GameScene {
 
         // Draw player
         this.player.draw(ctx, camX, this.timeOfDay);
+        this._drawTreeShadowOverlay(ctx, camX, this.player);
 
         // Draw "GAUCHO POWER" floating text above player
         if (this._gauchoPowerTextTimer > 0 && this._gauchoPowerTextTex) {
@@ -1525,6 +1559,70 @@ export class GameScene {
             const textY = signCenterY - textH / 2;
 
             ctx.drawImage(metersText, textX, textY, textW, textH);
+        }
+    }
+
+    /**
+     * Draw a dark shadow overlay on an entity if it's under a tree or umbrella canopy.
+     * Entity must have .x (world coords) and either .getCurrentTexture() or sprite dimensions.
+     */
+    _drawTreeShadowOverlay(ctx, cameraX, entity) {
+        if (this.timeOfDay !== 'day') return; // shadows only during daytime
+        if (entity.knocked) return; // skip knocked NPCs
+
+        const scale = Config.pixelScale;
+        const sidewalkH = 16 * scale;
+        const entityWorldX = entity.x;
+
+        // Check all tree/umbrella obstacles
+        for (const obs of this.obstacles) {
+            if (obs.type !== 'tree' && obs.type !== 'beachUmbrella') continue;
+
+            // Canopy horizontal range (world coords, centered on obs.x)
+            const obsTex = obs.texture;
+            const obsW = obsTex.width * scale;
+            const canopyHalfW = obsW * 0.45; // canopy covers ~90% of tree width
+
+            if (entityWorldX >= obs.x - canopyHalfW && entityWorldX <= obs.x + canopyHalfW) {
+                // Entity is under canopy — draw shadow overlay
+                // Get entity screen bounds
+                let tex, eScale, eW, eH, eScreenX, eScreenY;
+
+                if (entity.getCurrentTexture) {
+                    // Player
+                    tex = entity.getCurrentTexture();
+                    eScale = scale;
+                    eW = tex.width * eScale;
+                    eH = tex.height * eScale;
+                    eScreenX = entityWorldX - cameraX - eW / 2;
+                    eScreenY = Config.sceneHeight - sidewalkH - eH - (entity.y - Config.groundSurface);
+                } else if (entity.scaleFactor) {
+                    // Skater (has scaleFactor)
+                    tex = TC.skaterFrames ? TC.skaterFrames[0] : null;
+                    eScale = scale * entity.scaleFactor;
+                    if (!tex) break;
+                    eW = tex.width * eScale;
+                    eH = tex.height * eScale;
+                    eScreenX = entityWorldX - cameraX - eW / 2;
+                    eScreenY = Config.sceneHeight - sidewalkH - eH - (entity.y - Config.groundSurface);
+                } else {
+                    // Jogger
+                    tex = TC.joggerRunFrames ? TC.joggerRunFrames[0] : null;
+                    eScale = scale;
+                    if (!tex) break;
+                    eW = tex.width * eScale;
+                    eH = tex.height * eScale;
+                    eScreenX = entityWorldX - cameraX - eW / 2;
+                    eScreenY = Config.sceneHeight - sidewalkH - eH;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(eScreenX, eScreenY, eW, eH);
+                ctx.restore();
+                break; // Only need one shadow
+            }
         }
     }
 
