@@ -363,12 +363,14 @@ export class Player {
         }
 
         if (this.gauchoPowerTimer >= totalDur) {
-            // Power ended
+            // Power ended — activate post-power invincibility (same as after collision)
             this.gauchoPowerActive = false;
             this.gauchoPowerPhase = 'none';
             this.gauchoPowerColorTimer = 0;
             this.gauchoPowerHue = 0;
-            this.isInvincible = false;
+            this.isInvincible = true;
+            this.invTimer = 0;
+            this.blinkTimer = 0;
             this.alpha = 1.0;
             this.levelSpeedMultiplier = this.baseSpeedMultiplier;
             return;

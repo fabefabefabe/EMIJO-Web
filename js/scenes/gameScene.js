@@ -260,14 +260,15 @@ export class GameScene {
         if (this.currentLevel === 2) {
             // Place it at ~40% of the level so player has time to see it
             const mateX = this.flag.x * 0.4;
-            this.matePickups.push(new MatePickup(mateX, Config.groundSurface));
+            const mateY = Config.heartMinY + Math.random() * (Config.heartMaxY - Config.heartMinY);
+            this.matePickups.push(new MatePickup(mateX, mateY));
         }
 
         const intervalPx = Config.mateSpawnIntervalMeters / Config.metersPerPixel;
         // Start from 2x interval (so mate doesn't appear too early)
         for (let x = intervalPx * 2; x < this.flag.x; x += intervalPx) {
             if (Math.random() < Config.mateSpawnChance) {
-                const y = Config.groundSurface; // on the ground (easy to grab)
+                const y = Config.heartMinY + Math.random() * (Config.heartMaxY - Config.heartMinY);
                 this.matePickups.push(new MatePickup(x, y));
             }
         }
