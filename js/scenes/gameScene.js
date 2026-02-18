@@ -18,6 +18,7 @@ import { Skater } from '../entities/skater.js';
 import { HallOfFame } from '../systems/hallOfFame.js';
 import { Beagle } from '../entities/beagle.js';
 import { MatePickup } from '../entities/matePickup.js';
+import * as Analytics from '../analytics.js';
 
 export class GameScene {
     constructor(game) {
@@ -221,6 +222,11 @@ export class GameScene {
                 jumpText: TC.renderText('SALTA EL OBSTACULO!'),
             };
         }
+
+        // Analytics: track level start + session timer
+        this._sessionStartTime = performance.now();
+        const charType2 = this.game.state.selectedCharacter || 'emi';
+        Analytics.trackLevelStart(this.currentLevel, charType2);
     }
 
     /**
@@ -752,6 +758,8 @@ export class GameScene {
                         this.game.music.setSpeedMultiplier(1.5);
                         // Remove remaining mates
                         for (const m of this.matePickups) m.alive = false;
+                        // Analytics
+                        Analytics.trackGauchoPower(this.currentLevel);
                     }
                     break;
                 }
@@ -1744,6 +1752,11 @@ export class GameScene {
     _triggerLevelComplete() {
         if (this.isLevelComplete) return;
         this.isLevelComplete = true;
+
+        // Analytics: level complete
+        const elapsedSec = (performance.now() - this._sessionStartTime) / 1000;
+        const charType = this.game.state.selectedCharacter || 'emi';
+        Analytics.trackLevelComplete(this.currentLevel, charType, elapsedSec);
         this._familyHugStarted = false;
         this._levelCompletePhase = 'landing'; // 'landing' → 'walking' → 'hugging'
 
@@ -1804,6 +1817,11 @@ export class GameScene {
         this.player.vx = 0;
         // Play game over music
         this.game.music.playTrack('gameover');
+
+        // Analytics: game over
+        const elapsedSec = (performance.now() - this._sessionStartTime) / 1000;
+        const charType = this.game.state.selectedCharacter || 'emi';
+        Analytics.trackGameOver(this.currentLevel, charType, this.metersWalked, elapsedSec);
     }
 
     _fireProjectile() {

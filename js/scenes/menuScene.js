@@ -3,6 +3,7 @@ import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 import { ParallaxSystem } from '../systems/parallax.js';
 import { Bird } from '../entities/bird.js';
+import { trackCharacterSelect } from '../analytics.js';
 
 export class MenuScene {
     constructor(game) {
@@ -356,6 +357,7 @@ export class MenuScene {
 
     _startGame() {
         this.game.state.selectedCharacter = this.selectedIndex === 0 ? 'emi' : 'jo';
+        trackCharacterSelect(this.game.state.selectedCharacter);
         // Resetear nivel a 1 al iniciar nuevo juego
         this.game.state.currentLevel = 1;
         // Show map scene first (introduces the route)
