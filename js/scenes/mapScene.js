@@ -425,20 +425,20 @@ export class MapScene {
             ctx.restore();
         }
 
-        // --- "TU ESTAS AQUI" marker (first map only) ---
-        if (this.isFirstMap && this.canProceed) {
+        // --- "TU ESTAS AQUI" marker (shown every time map appears) ---
+        if (this.canProceed) {
             const targetPos = CP[this.targetCityIndex];
             const yahText = this._youAreHereText;
             const yahScale = scale * 0.45;
             const yahW = yahText.width * yahScale;
             const yahH = yahText.height * yahScale;
 
-            // Position above+right of the city dot
-            const yahX = targetPos.x + 15;
+            // Center bubble above the target city dot
+            const yahX = targetPos.x - yahW / 2;
             const yahY = targetPos.y - 50 - yahH;
 
             // Clamp so it doesn't go off-screen
-            const clampedX = Math.max(4, Math.min(yahX, W - yahW - 20));
+            const clampedX = Math.max(4, Math.min(yahX, W - yahW - 8));
             const clampedY = Math.max(4, yahY);
 
             // Bobbing animation
@@ -466,8 +466,8 @@ export class MapScene {
             ctx.closePath();
             ctx.fill();
 
-            // Pointer triangle
-            const ptrX = targetPos.x + 15;
+            // Pointer triangle pointing down to the dot
+            const ptrX = targetPos.x;
             const clampedPtrX = Math.max(bubbleX + 10, Math.min(ptrX, bubbleX + bubbleW - 10));
             ctx.beginPath();
             ctx.moveTo(clampedPtrX - 5, bubbleY + bubbleH);
