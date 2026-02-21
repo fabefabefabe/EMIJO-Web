@@ -102,12 +102,12 @@ export const CITY_DATA = [
 
 /**
  * Returns true if the given level should use beach terrain.
- * Levels 5-6 of each 6-level block are beach.
- * Cabo Polonio (levels 67-72) is ALL beach.
+ * Pattern: 3 levels rambla, 3 levels beach, repeating.
+ * Levels 1-3: rambla, 4-6: beach, 7-9: rambla, 10-12: beach, ...
  */
 export function isBeachLevel(level) {
-    const posInBlock = ((level - 1) % 6) + 1;
-    return posInBlock >= 5 || (level >= 67 && level <= 72);
+    const posInBlock = ((level - 1) % 6); // 0-5
+    return posInBlock >= 3; // 3,4,5 = beach
 }
 
 /**
@@ -118,25 +118,12 @@ export function getCityForLevel(level) {
 }
 
 /**
- * Returns 'day', 'sunset', or 'night' based on level and real-world time.
- * The initial state is determined by the system clock:
- *   6:00-17:59  → day
- *   18:00-21:59 → sunset
- *   22:00-5:59  → night
- * Then cycles every 6 levels: initial → next → next → initial ...
- * The order is: day → sunset → night → day → ...
+ * Returns 'day', 'sunset', or 'night' based on level.
+ * Cycles every 2 levels: day(1-2) → sunset(3-4) → night(5-6) → day(7-8) → ...
  */
 export function getTimeOfDay(level) {
-    const hour = new Date().getHours();
-    let startPhase;
-    if (hour >= 6 && hour < 18) startPhase = 0;       // day
-    else if (hour >= 18 && hour < 22) startPhase = 1;  // sunset
-    else startPhase = 2;                                // night
-
-    const cycleOffset = Math.floor((level - 1) / 6);
-    const phase = (startPhase + cycleOffset) % 3;
-
-    if (phase === 0) return 'day';
-    if (phase === 1) return 'sunset';
+    const cyclePos = Math.floor((level - 1) / 2) % 3;
+    if (cyclePos === 0) return 'day';
+    if (cyclePos === 1) return 'sunset';
     return 'night';
 }

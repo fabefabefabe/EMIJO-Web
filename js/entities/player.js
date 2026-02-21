@@ -58,9 +58,9 @@ export class Player {
         // Jump requested by tap/click (consumed on next frame)
         this.jumpRequested = false;
 
-        // Progressive speed: sqrt curve, increases every 5 levels
-        // Levels 1-5: 0.55x, 6-10: 0.75x, 11-15: 0.83x, 26-30: 1.00x
-        const speedStep = Math.floor((level - 1) / 5);
+        // Progressive speed: sqrt curve, increases every 20 levels
+        // Levels 1-20: 0.55x, 21-40: 0.75x, 41-60: 0.83x, 61-80: 0.88x
+        const speedStep = Math.floor((level - 1) / 20);
         this.levelSpeedMultiplier = 0.55 + 0.09 * Math.sqrt(speedStep * 5);
 
         // Gaucho Power (mate powerup)
