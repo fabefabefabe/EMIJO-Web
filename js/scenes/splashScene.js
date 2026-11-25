@@ -1,5 +1,5 @@
 // Splash Scene - shows EMIJO logo with fade in, then waits for Enter
-import { Config } from '../config.js';
+import { Config, VERSION } from '../config.js';
 import * as TC from '../textureCache.js';
 
 export class SplashScene {
@@ -98,7 +98,7 @@ export class SplashScene {
             const ah = authorText.height * creditScale;
             ctx.drawImage(authorText, (W - aw) / 2, H * 0.86, aw, ah);
 
-            const creditText = TC.renderText('CREADO CON CLAUDE ANTHROPIC OPUS 4.6');
+            const creditText = TC.renderText('VERSIÓN ' + VERSION);
             const cw = creditText.width * creditScale;
             const ch = creditText.height * creditScale;
             ctx.drawImage(creditText, (W - cw) / 2, H * 0.92, cw, ch);

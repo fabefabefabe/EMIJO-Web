@@ -192,9 +192,9 @@ export class GameScene {
         // Parents next to the flag
         this.parents = new Parents(flagX + 80, groundSurface);
 
-        // Beagle companion (level 6+)
+        // Beagle companion (level 2+)
         this.beagle = null;
-        if (this.currentLevel >= 6) {
+        if (this.currentLevel >= 2) {
             this.beagle = new Beagle(this.player.x - 100, groundSurface);
         }
 
@@ -315,6 +315,85 @@ export class GameScene {
         return markers;
     }
 
+    _updateAmbient(dt) {
+        // Dog animation (tail wag / head tilt)
+        this.dogAnimTimer += dt;
+        if (this.dogAnimTimer >= 0.8) { // Faster animation cycle
+            this.dogAnimTimer -= 0.8;
+            this.dogFrame = 1 - this.dogFrame; // Toggle 0/1
+        }
+
+        // Bonfire animation + sparks
+        for (const bf of this.bonfires) {
+            bf.timer += dt;
+            if (bf.timer >= 0.15) {
+                bf.timer -= 0.15;
+                bf.frame = (bf.frame + 1) % 4;
+            }
+            // Spawn sparks occasionally
+            if (Math.random() < dt * 8) {
+                bf.sparks.push({
+                    x: bf.x + (Math.random() - 0.5) * 20,
+                    y: 0,
+                    vy: -40 - Math.random() * 60,
+                    vx: (Math.random() - 0.5) * 20,
+                    alpha: 1.0,
+                    life: 0.5 + Math.random() * 0.5,
+                });
+            }
+            // Update sparks
+            for (let i = bf.sparks.length - 1; i >= 0; i--) {
+                const sp = bf.sparks[i];
+                sp.y += sp.vy * dt;
+                sp.x += sp.vx * dt;
+                sp.life -= dt;
+                sp.alpha = Math.max(0, sp.life / 1.0);
+                if (sp.life <= 0) bf.sparks.splice(i, 1);
+            }
+        }
+
+        // Hippie animation
+        for (const hp of this.hippies) {
+            hp.timer += dt;
+            if (hp.timer >= 0.5) {
+                hp.timer -= 0.5;
+                hp.frame = 1 - hp.frame;
+            }
+        }
+
+        // Parallax (sea, gardeners, sandcastles...)
+        this.parallax.update(dt);
+
+        // Obstacle animations (trash can flies, etc.)
+        for (const obstacle of this.obstacles) {
+            obstacle.update(dt);
+        }
+
+        // Spawn birds
+        this.birdSpawnTimer += dt;
+        if (this.birdSpawnTimer >= Config.birdSpawnInterval) {
+            this.birdSpawnTimer -= Config.birdSpawnInterval;
+            this.birds.push(Bird.spawnRandom(this.camera.offset, this.timeOfDay));
+        }
+
+        // Update birds
+        for (const bird of this.birds) {
+            bird.update(dt);
+        }
+        this.birds = this.birds.filter(b => b.alive);
+
+        // Update heart pickups (fixed positions, no random spawn)
+        for (const heart of this.heartPickups) {
+            heart.update(dt);
+        }
+        // Remove collected hearts only (keep off-screen ones for when player returns)
+        this.heartPickups = this.heartPickups.filter(h => h.alive);
+
+        // Pickup animations
+        for (const a of this.ammoPickups) a.update(dt);
+        for (const m of this.matePickups) m.update(dt);
+    }
+
     update(dt) {
         const input = this.game.input;
 
@@ -341,8 +420,9 @@ export class GameScene {
 
         // Handle end states
         if (this.isLevelComplete) {
-            // Keep flag animating during level complete
+            // Keep flag and the whole background animating during level complete
             this.flag.update(dt);
+            this._updateAmbient(dt);
 
             // Update beagle (runs to parents and sits)
             if (this.beagle) {
@@ -504,52 +584,8 @@ export class GameScene {
             }
         }
 
-        // Dog animation (tail wag / head tilt)
-        this.dogAnimTimer += dt;
-        if (this.dogAnimTimer >= 0.8) { // Faster animation cycle
-            this.dogAnimTimer -= 0.8;
-            this.dogFrame = 1 - this.dogFrame; // Toggle 0/1
-        }
-
-        // Bonfire animation + sparks
-        for (const bf of this.bonfires) {
-            bf.timer += dt;
-            if (bf.timer >= 0.15) {
-                bf.timer -= 0.15;
-                bf.frame = (bf.frame + 1) % 4;
-            }
-            // Spawn sparks occasionally
-            if (Math.random() < dt * 8) {
-                bf.sparks.push({
-                    x: bf.x + (Math.random() - 0.5) * 20,
-                    y: 0,
-                    vy: -40 - Math.random() * 60,
-                    vx: (Math.random() - 0.5) * 20,
-                    alpha: 1.0,
-                    life: 0.5 + Math.random() * 0.5,
-                });
-            }
-            // Update sparks
-            for (let i = bf.sparks.length - 1; i >= 0; i--) {
-                const sp = bf.sparks[i];
-                sp.y += sp.vy * dt;
-                sp.x += sp.vx * dt;
-                sp.life -= dt;
-                sp.alpha = Math.max(0, sp.life / 1.0);
-                if (sp.life <= 0) bf.sparks.splice(i, 1);
-            }
-        }
-
-        // Hippie animation
-        for (const hp of this.hippies) {
-            hp.timer += dt;
-            if (hp.timer >= 0.5) {
-                hp.timer -= 0.5;
-                hp.frame = 1 - hp.frame;
-            }
-        }
-
-
+        // Ambient animations (dog, bonfires, hippies, sea, birds, pickups...)
+        this._updateAmbient(dt);
 
         // Track previous state for jump sound
         const wasOnGround = this.player.isOnGround;
@@ -606,36 +642,8 @@ export class GameScene {
             }
         }
 
-        // Update parallax (sea animation)
-        this.parallax.update(dt);
-
         // Update flag
         this.flag.update(dt);
-
-        // Update obstacles (for trash can animations)
-        for (const obstacle of this.obstacles) {
-            obstacle.update(dt);
-        }
-
-        // Spawn birds
-        this.birdSpawnTimer += dt;
-        if (this.birdSpawnTimer >= Config.birdSpawnInterval) {
-            this.birdSpawnTimer -= Config.birdSpawnInterval;
-            this.birds.push(Bird.spawnRandom(this.camera.offset, this.timeOfDay));
-        }
-
-        // Update birds
-        for (const bird of this.birds) {
-            bird.update(dt);
-        }
-        this.birds = this.birds.filter(b => b.alive);
-
-        // Update heart pickups (fixed positions, no random spawn)
-        for (const heart of this.heartPickups) {
-            heart.update(dt);
-        }
-        // Remove collected hearts only (keep off-screen ones for when player returns)
-        this.heartPickups = this.heartPickups.filter(h => h.alive);
 
         // Update projectiles
         for (const proj of this.projectiles) {
@@ -720,10 +728,6 @@ export class GameScene {
             }
         }
 
-        // Update ammo pickups
-        for (const ammo of this.ammoPickups) {
-            ammo.update(dt);
-        }
         this.ammoPickups = this.ammoPickups.filter(a => a.alive);
 
         // Collision: player vs ammo pickups → activate auto-shoot
@@ -739,10 +743,6 @@ export class GameScene {
             }
         }
 
-        // Update mate pickups
-        for (const mate of this.matePickups) {
-            mate.update(dt);
-        }
         this.matePickups = this.matePickups.filter(m => m.alive);
 
         // Collision: player vs mate pickups → activate Gaucho Power

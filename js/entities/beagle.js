@@ -1,4 +1,4 @@
-// Beagle Entity - companion dog that follows the player from level 6+
+// Beagle Entity - companion dog that follows the player from level 2+
 import { Config } from '../config.js';
 import * as TC from '../textureCache.js';
 
