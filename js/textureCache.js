@@ -1,5 +1,6 @@
 // Texture Cache - pre-renders all pixel art into offscreen canvases at load time
 import { renderSprite } from './renderer.js';
+import { buildWalkCycle } from './sprites/walkCycle.js';
 import { Palettes } from './palettes.js';
 
 // Character sprites
@@ -88,7 +89,7 @@ export const emiGetUp = renderSprite(EmiSprites.getUp, Palettes.emi);
 export const emiLyingDown = renderSprite(EmiSprites.lyingDown, Palettes.emi);
 export const emiPortrait = renderSprite(EmiSprites.portrait, Palettes.emi);
 
-export const emiWalkFrames = [emiWalk1, emiWalk2, emiWalk3, emiWalk4, emiWalk5, emiWalk6];
+export const emiWalkFrames = buildWalkCycle([EmiSprites.walk1,EmiSprites.walk2,EmiSprites.walk3,EmiSprites.walk4,EmiSprites.walk5,EmiSprites.walk6], 'emi').map(f => renderSprite(f, Palettes.emi));
 
 // --- Jo Textures ---
 export const joIdle = renderSprite(JoSprites.idle, Palettes.jo);
@@ -105,7 +106,7 @@ export const joGetUp = renderSprite(JoSprites.getUp, Palettes.jo);
 export const joLyingDown = renderSprite(JoSprites.lyingDown, Palettes.jo);
 export const joPortrait = renderSprite(JoSprites.portrait, Palettes.jo);
 
-export const joWalkFrames = [joWalk1, joWalk2, joWalk3, joWalk4, joWalk5, joWalk6];
+export const joWalkFrames = buildWalkCycle([JoSprites.walk1,JoSprites.walk2,JoSprites.walk3,JoSprites.walk4,JoSprites.walk5,JoSprites.walk6], 'jo').map(f => renderSprite(f, Palettes.jo));
 
 // --- Emi Beach Textures ---
 export const emiBeachIdle = renderSprite(EmiBeachSprites.idle, Palettes.emi);
@@ -120,7 +121,7 @@ export const emiBeachCrouch = renderSprite(EmiBeachSprites.crouch, Palettes.emi)
 export const emiBeachFall = renderSprite(EmiBeachSprites.fall, Palettes.emi);
 export const emiBeachGetUp = renderSprite(EmiBeachSprites.getUp, Palettes.emi);
 export const emiBeachLyingDown = renderSprite(EmiBeachSprites.lyingDown, Palettes.emi);
-export const emiBeachWalkFrames = [emiBeachWalk1, emiBeachWalk2, emiBeachWalk3, emiBeachWalk4, emiBeachWalk5, emiBeachWalk6];
+export const emiBeachWalkFrames = buildWalkCycle([EmiBeachSprites.walk1,EmiBeachSprites.walk2,EmiBeachSprites.walk3,EmiBeachSprites.walk4,EmiBeachSprites.walk5,EmiBeachSprites.walk6], 'emi').map(f => renderSprite(f, Palettes.emi));
 
 // --- Jo Beach Textures ---
 export const joBeachIdle = renderSprite(JoBeachSprites.idle, Palettes.jo);
@@ -135,7 +136,7 @@ export const joBeachCrouch = renderSprite(JoBeachSprites.crouch, Palettes.jo);
 export const joBeachFall = renderSprite(JoBeachSprites.fall, Palettes.jo);
 export const joBeachGetUp = renderSprite(JoBeachSprites.getUp, Palettes.jo);
 export const joBeachLyingDown = renderSprite(JoBeachSprites.lyingDown, Palettes.jo);
-export const joBeachWalkFrames = [joBeachWalk1, joBeachWalk2, joBeachWalk3, joBeachWalk4, joBeachWalk5, joBeachWalk6];
+export const joBeachWalkFrames = buildWalkCycle([JoBeachSprites.walk1,JoBeachSprites.walk2,JoBeachSprites.walk3,JoBeachSprites.walk4,JoBeachSprites.walk5,JoBeachSprites.walk6], 'jo').map(f => renderSprite(f, Palettes.jo));
 
 // --- Portrait Animation Frames ---
 export const emiPortraitFrames = [
