@@ -20,7 +20,7 @@ import { tile as bushLargeTileData } from './sprites/bushLargePixels.js';
 import { tile as sidewalkTileData } from './sprites/sidewalkPixels.js';
 
 // Object sprites
-import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, trashCanFalling as trashCanFallingData, trashCanSpilled as trashCanSpilledData, potholeFlat as potholeFlatData, potholeFallIn as potholeFallInData, potholeEyes as potholeEyesData, potholeEyesClosed as potholeEyesClosedData, potholeFallInBody as potholeFallInBodyData, potholeFallInHole as potholeFallInHoleData, cooler as coolerData, tree as treeData, leaf as leafData } from './sprites/obstaclePixels.js';
+import { rock as rockData, bench as benchData, benchWithPerson1, benchWithPerson2, benchPerson1Complain1, benchPerson1Complain2, benchPerson2Complain1, benchPerson2Complain2, trashCan as trashCanData, trashCanFlies1, trashCanFlies2, trashCanFalling as trashCanFallingData, trashCanSpilled as trashCanSpilledData, potholeFlat as potholeFlatData, potholeFallIn as potholeFallInData, potholeEyes as potholeEyesData, potholeEyesClosed as potholeEyesClosedData, potholeFallInBody as potholeFallInBodyData, potholeFallInHole as potholeFallInHoleData, cooler as coolerData, tree as treeData, leaf as leafData } from './sprites/obstaclePixels.js';
 import { joggerRun1, joggerRun2, joggerFallen } from './sprites/joggerPixels.js';
 import { flag as flagData, flag1 as flag1Data, flag2 as flag2Data, flag3 as flag3Data } from './sprites/flagPixels.js';
 import { frame1 as birdFrame1, frame2 as birdFrame2, frame3 as birdFrame3 } from './sprites/birdPixels.js';
@@ -229,6 +229,11 @@ export const trashCanFliesFrames = [
 export const benchWithPersonFrames = [
     renderSprite(benchWithPerson1, Palettes.objects),
     renderSprite(benchWithPerson2, Palettes.objects),
+];
+// Complaining frames per variant (arms up, protesting)
+export const benchComplainFrames = [
+    [renderSprite(benchPerson1Complain1, Palettes.objects), renderSprite(benchPerson1Complain2, Palettes.objects)],
+    [renderSprite(benchPerson2Complain1, Palettes.objects), renderSprite(benchPerson2Complain2, Palettes.objects)],
 ];
 
 // --- Jogger Textures ---

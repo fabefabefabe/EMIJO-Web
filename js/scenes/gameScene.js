@@ -937,6 +937,7 @@ export class GameScene {
             } else {
                 // Rock, bench, cooler: normal trip
                 if (this.player.tripAndFall()) {
+                    if (obstacle.type === 'bench') obstacle.startComplaining();
                     this.game.music.playHitSound();
                 }
                 break;
@@ -1099,7 +1100,7 @@ export class GameScene {
             ctx.restore();
         }
 
-        // Draw pothole speech bubble on top of everything (deferred for z-order)
+        // Draw speech bubbles (pothole, complaining bench person) on top of everything (deferred for z-order)
         for (const obstacle of this.obstacles) {
             if (obstacle.drawSpeechBubbleDeferred) {
                 obstacle.drawSpeechBubbleDeferred(ctx);

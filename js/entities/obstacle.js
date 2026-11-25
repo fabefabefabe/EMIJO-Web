@@ -74,6 +74,9 @@ export class Obstacle {
             } else {
                 this.benchVariant = -1; // empty bench
             }
+            this.complaining = false;
+            this.complainTimer = 0;
+            this.complainFrame = 0;
         }
 
         // --- Pothole: fall animation state ---
@@ -229,6 +232,25 @@ export class Obstacle {
     }
 
     /**
+     * Person on the bench starts protesting with raised arms (called on player collision).
+     * Keeps complaining until the obstacle leaves the screen.
+     */
+    startComplaining() {
+        if (this.type !== 'bench' || this.benchVariant < 0 || this.complaining) return;
+        this.complaining = true;
+        this.complainTimer = 0;
+        this.complainFrame = 0;
+        // Same speech bubble look & feel as the pothole (font has no ? or , so avoid them)
+        const phrases = [
+            'EH! MIRA POR DONDE ANDAS!',
+            'QUE MALEDUCADO!',
+            'ESTOY SENTADO ACA!',
+        ];
+        this._speechBubbleText = TC.renderTextBlack(phrases[Math.floor(Math.random() * phrases.length)]);
+        this.speechBubbleAlpha = 0;
+    }
+
+    /**
      * Knock over the trash can (called on player collision)
      */
     knockOver() {
@@ -242,6 +264,18 @@ export class Obstacle {
      * Update animation states.
      */
     update(dt) {
+        // Bench person complaining: alternate arm frames forever
+        if (this.type === 'bench' && this.complaining) {
+            if (this.speechBubbleAlpha < 1) {
+                this.speechBubbleAlpha = Math.min(1, this.speechBubbleAlpha + dt * 3);
+            }
+            this.complainTimer += dt;
+            if (this.complainTimer >= 0.18) {
+                this.complainTimer -= 0.18;
+                this.complainFrame = 1 - this.complainFrame;
+            }
+        }
+
         // Trash can fly animation (only if not knocked)
         if (this.type === 'trashCan') {
             if (this.knocked) {
@@ -413,7 +447,9 @@ export class Obstacle {
                 texture = TC.trashCanFliesFrames[this.flyFrame];
             }
         } else if (this.type === 'bench' && this.benchVariant >= 0) {
-            texture = TC.benchWithPersonFrames[this.benchVariant];
+            texture = this.complaining
+                ? TC.benchComplainFrames[this.benchVariant][this.complainFrame]
+                : TC.benchWithPersonFrames[this.benchVariant];
         } else if (this.type === 'pothole') {
             const isNight = this.timeOfDay === 'night';
             if (this.activeFallAnim) {
@@ -513,6 +549,9 @@ export class Obstacle {
         }
 
         // Speech bubble during pothole eyes phase — deferred to separate pass for z-order
+        if (this.type === 'bench' && this.complaining && this._speechBubbleText) {
+            this._pendingSpeechBubble = { centerX: screenX + w / 2, topY: screenY };
+        }
         if (this.type === 'pothole' && this.activeFallAnim && this.fallAnimPhase === 'eyes' && this._speechBubbleText) {
             this._pendingSpeechBubble = { centerX: screenX + w / 2, topY: screenY };
         }

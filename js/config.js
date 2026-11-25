@@ -1,6 +1,6 @@
 // Game configuration constants (ported from GameConfig.swift)
 // Version 1.0.X — X sube en uno con cada commit
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.1';
 
 export const Config = {
     // Scene

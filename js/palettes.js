@@ -78,6 +78,8 @@ export const Palettes = {
         [80,140,50],        // 18: tree green light
         [50,110,35],        // 19: tree green mid
         [30,80,20],         // 20: tree green dark
+        [255,200,160],      // 21: skin
+        [220,170,130],      // 22: skin shadow
     ],
 
     objectsNight: [
@@ -102,6 +104,8 @@ export const Palettes = {
         [80,140,50],        // 18: tree green light
         [50,110,35],        // 19: tree green mid
         [30,80,20],         // 20: tree green dark
+        [255,200,160],      // 21: skin
+        [220,170,130],      // 22: skin shadow
     ],
 
     ui: [
