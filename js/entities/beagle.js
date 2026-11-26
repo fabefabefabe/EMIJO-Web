@@ -63,7 +63,52 @@ export class Beagle {
         this.vy = 0;
         this.jumping = false;
 
+        // Smooth movement: horizontal velocity + estimated player velocity
+        this.vx = 0;
+        this.playerVx = 0;
+        this._lastPlayerX = startX + 100;
+
         this.alive = true;
+    }
+
+    /**
+     * Smoothly steers toward targetX using a velocity controller instead of
+     * fixed-speed steps (which overshoot and make the dog jitter near the target).
+     * @param {number} targetVx - velocity of whatever we follow (px/s)
+     * @param {number} maxSpeed - speed cap (px/s)
+     */
+    _follow(dt, targetX, targetVx, maxSpeed) {
+        const diff = targetX - this.x;
+        // Match the leader's speed and close the gap proportionally
+        let desired = targetVx + diff * 4.5;
+        desired = Math.max(0, Math.min(maxSpeed, desired));
+        // Limit acceleration for fluid starts/stops
+        const maxDelta = 1400 * dt;
+        this.vx += Math.max(-maxDelta, Math.min(maxDelta, desired - this.vx));
+        this.x += this.vx * dt;
+    }
+
+    /** Slows the dog to a stop (used by non-moving states). */
+    _decelerate(dt) {
+        const maxDelta = 1800 * dt;
+        this.vx += Math.max(-maxDelta, Math.min(maxDelta, -this.vx));
+        this.x += this.vx * dt;
+    }
+
+    /** Run animation speed follows the real speed; stands still when nearly stopped. */
+    _animateRun(dt) {
+        const speed = Math.abs(this.vx);
+        if (speed < 30) {
+            this.frame = 0;
+            this.animTimer = 0;
+            return;
+        }
+        const interval = Math.max(0.07, Math.min(0.16, 42 / speed));
+        this.animTimer += dt;
+        if (this.animTimer >= interval) {
+            this.animTimer -= interval;
+            this.frame = (this.frame + 1) % 2;
+        }
     }
 
     /**
@@ -72,6 +117,7 @@ export class Beagle {
      */
     startLevelComplete(targetX) {
         this.levelCompleteTargetX = targetX;
+        this.vx = 0;
         this.state = STATES.LEVEL_COMPLETE;
         this.frame = 0;
         this.animTimer = 0;
@@ -98,6 +144,13 @@ export class Beagle {
 
         this.timeSinceLastSniff += dt;
         this.timeSinceLastSprint += dt;
+
+        // Estimate the player's velocity (smoothed)
+        if (dt > 0) {
+            const rawV = (playerX - this._lastPlayerX) / dt;
+            this.playerVx += (rawV - this.playerVx) * Math.min(1, dt * 10);
+        }
+        this._lastPlayerX = playerX;
 
         switch (this.state) {
             case STATES.SITTING:
@@ -156,6 +209,7 @@ export class Beagle {
 
     _updateSitting(dt, playerX) {
         this.sitTimer += dt;
+        this._decelerate(dt);
         // Animate sit frame (slight tail wag)
         this.animTimer += dt;
         if (this.animTimer >= 0.5) {
@@ -169,22 +223,9 @@ export class Beagle {
     }
 
     _updateRunning(dt, playerX, joggers, skaters) {
-        // Target position: close behind player
-        const targetX = playerX - 45;
-        const diff = targetX - this.x;
-
-        // Move toward target
-        if (Math.abs(diff) > 5) {
-            const speed = Config.walkSpeed * (Math.abs(diff) > 200 ? 1.2 : 0.95);
-            this.x += Math.sign(diff) * speed * dt;
-        }
-
-        // Run animation (2 frames)
-        this.animTimer += dt;
-        if (this.animTimer >= 0.12) {
-            this.animTimer -= 0.12;
-            this.frame = (this.frame + 1) % 2;
-        }
+        // Follow smoothly, close behind the player
+        this._follow(dt, playerX - 45, this.playerVx, Config.walkSpeed * 1.3);
+        this._animateRun(dt);
 
         // Random sniff trigger
         if (this.timeSinceLastSniff >= this.nextSniffAt && Math.random() < 0.3 * dt) {
@@ -224,6 +265,7 @@ export class Beagle {
 
     _updateSniffing(dt, playerX) {
         this.sniffTimer += dt;
+        this._decelerate(dt);
         // Sniff animation (2 frames, slower)
         this.animTimer += dt;
         if (this.animTimer >= 0.3) {
@@ -250,16 +292,11 @@ export class Beagle {
 
         if (this.chaseTarget && this.chaseTarget.alive && !this.chaseTarget.knocked) {
             // Run toward NPC
-            const diff = this.chaseTarget.x - this.x;
-            this.x += Math.sign(diff) * Config.walkSpeed * 1.1 * dt;
+            this._follow(dt, this.chaseTarget.x, 0, Config.walkSpeed * 1.1);
+        } else {
+            this._decelerate(dt);
         }
-
-        // Run animation
-        this.animTimer += dt;
-        if (this.animTimer >= 0.1) {
-            this.animTimer -= 0.1;
-            this.frame = (this.frame + 1) % 2;
-        }
+        this._animateRun(dt);
 
         // Stop chasing after duration or if target gone
         if (this.chaseTimer >= this.chaseDuration ||
@@ -282,6 +319,7 @@ export class Beagle {
         if (this.offscreenTimer >= this.offscreenDuration) {
             // Reappear behind the player, running to catch up
             this.x = playerX - 500;
+            this.vx = 0;
             this.state = STATES.RETURNING;
             this.frame = 0;
             this.animTimer = 0;
@@ -292,15 +330,9 @@ export class Beagle {
         const targetX = playerX - 45;
         const diff = targetX - this.x;
 
-        // Run faster to catch up
-        this.x += Math.sign(diff) * Config.walkSpeed * this.returnSpeedMult * dt;
-
-        // Run animation (faster)
-        this.animTimer += dt;
-        if (this.animTimer >= 0.08) {
-            this.animTimer -= 0.08;
-            this.frame = (this.frame + 1) % 2;
-        }
+        // Run faster to catch up (still smooth)
+        this._follow(dt, targetX, this.playerVx, Config.walkSpeed * this.returnSpeedMult);
+        this._animateRun(dt);
 
         // Close enough — switch to normal running
         if (Math.abs(diff) < 60) {
@@ -314,16 +346,8 @@ export class Beagle {
         this.sprintTimer += dt;
 
         // Sprint ahead of player at 2x speed
-        const sprintTargetX = playerX + 200;
-        const diff = sprintTargetX - this.x;
-        this.x += Math.sign(diff) * Config.walkSpeed * 2.0 * dt;
-
-        // Fast run animation
-        this.animTimer += dt;
-        if (this.animTimer >= 0.08) {
-            this.animTimer -= 0.08;
-            this.frame = (this.frame + 1) % 2;
-        }
+        this._follow(dt, playerX + 200, this.playerVx, Config.walkSpeed * 2.0);
+        this._animateRun(dt);
 
         // End sprint: duration elapsed or far enough ahead
         if (this.sprintTimer >= this.sprintDuration || this.x > playerX + 250) {
@@ -349,6 +373,7 @@ export class Beagle {
         } else {
             // Arrived — sit down
             this.x = this.levelCompleteTargetX;
+            this.vx = 0;
             this.state = STATES.SITTING;
             this.sitTimer = 99; // don't auto-transition back to running
             this.sitDuration = 999;
